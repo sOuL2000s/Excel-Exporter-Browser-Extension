@@ -10,131 +10,140 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Fuse.js CDN for fuzzy matching -->
     <script src="https://cdn.jsdelivr.net/npm/fuse.js/dist/fuse.min.js"></script>
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6; /* Light gray background */
-            width: 400px; /* Fixed width for the popup */
-            padding: 1rem;
-        }
-        .container {
-            padding: 1rem;
-            background-color: #ffffff;
-            border-radius: 0.75rem; /* Rounded corners */
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-        .btn-primary {
-            @apply bg-blue-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75;
-        }
-        .btn-secondary {
-            @apply bg-gray-300 text-gray-800 px-4 py-2 rounded-lg shadow-md hover:bg-gray-400 transition duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-75;
-        }
-        input[type="text"], select {
-            @apply border border-gray-300 rounded-md p-2 w-full focus:ring-2 focus:ring-blue-500 focus:border-transparent;
-        }
-        .file-input-label {
-            @apply block w-full text-center py-3 px-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:text-blue-600 transition duration-300 ease-in-out;
-        }
-        .file-input-label input[type="file"] {
-            display: none;
-        }
-        /* Styling for grouped field items */
-        .field-mapping-group-item {
-            @apply flex flex-col mb-4 p-4 bg-gray-50 rounded-lg shadow-sm;
-        }
-        .checkbox-label {
-            @apply flex items-center cursor-pointer;
-        }
-        .checkbox-label input[type="checkbox"] {
-            @apply h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500;
-        }
-        .message-box {
-            @apply p-3 rounded-md text-sm;
-        }
-        .message-success {
-            @apply bg-green-100 text-green-800;
-        }
-        .message-error {
-            @apply bg-red-100 text-red-800;
-        }
-        .message-info {
-            @apply bg-blue-100 text-blue-800;
-        }
-        .loading-spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            border-left-color: #2563eb;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
-            display: inline-block;
-            vertical-align: middle;
-            margin-left: 0.5rem;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        /* NEW: Styling for auto-matched badge */
-        .auto-matched-badge {
-            @apply inline-block bg-green-200 text-green-800 text-xs font-medium px-2 py-0.5 rounded-full ml-2;
-        }
-    </style>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Custom Stylesheet -->
+    <link rel="stylesheet" href="popup.css">
 </head>
-<body class="antialiased">
-    <div class="container">
-        <h1 class="text-xl font-bold text-center text-gray-800 mb-4">Spreadsheet Data Filler</h1>
+<body class="bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center min-h-screen p-4 transition-colors duration-300 antialiased">
+    <div class="main-container bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 md:p-8 max-w-lg w-full border border-gray-200 dark:border-gray-700 relative transition-colors duration-300">
+        <h1 class="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 text-center mb-6 pb-2 border-b border-gray-200 dark:border-gray-700">Extension Features</h1>
 
-        <!-- Step 1: Upload File -->
-        <section class="mb-6 p-4 border border-gray-200 rounded-lg">
-            <h2 class="text-lg font-semibold text-gray-700 mb-3">1. Upload File</h2>
-            <p class="text-gray-600 text-sm mb-3">Supported: .XLS, .XLSX, .ODS, .CSV, .XLSM, .XLSB.</p>
-            <label for="fileInput" class="file-input-label">
-                <span id="fileNameDisplay" class="text-gray-500">Click or drag file here</span>
-                <input type="file" id="fileInput" accept=".xls,.xlsx,.ods,.csv,.xlsm,.xlsb" />
-            </label>
-            <div id="fileUploadMessage" class="message-box mt-3 hidden"></div>
-        </section>
+        <!-- Dark Mode Toggle -->
+        <label class="theme-switch absolute top-4 right-4 md:top-6 md:right-6">
+          <input type="checkbox" id="themeToggle">
+          <span class="slider"></span>
+        </label>
 
-        <!-- Step 2: Display Headers and Scan Form -->
-        <section id="dataDisplaySection" class="mb-6 p-4 border border-gray-200 rounded-lg hidden">
-            <h2 class="text-lg font-semibold text-gray-700 mb-3">2. Map Fields</h2>
+        <!-- Tab Buttons -->
+        <div class="tab-buttons">
+            <button id="autoFillTab" class="tab-button active">
+                <i class="fas fa-file-excel mr-2"></i>Auto Fill
+            </button>
+            <button id="autoClickTab" class="tab-button">
+                <i class="fas fa-mouse-pointer mr-2"></i>Auto Click
+            </button>
+        </div>
 
-            <div class="mb-4">
-                <h3 class="text-md font-medium text-gray-700 mb-2">File Headers:</h3>
-                <div id="headersDisplay" class="bg-gray-100 p-3 rounded-md text-gray-700 text-xs overflow-x-auto">
-                    <!-- Headers will be displayed here -->
-                </div>
-            </div>
-
-            <button id="scanFieldsButton" class="btn-secondary w-full mb-4">Scan Current Tab for Fields</button>
-            <div id="scanMessage" class="message-box mt-3 hidden"></div>
-
-            <!-- Field Mapping Section -->
-            <div id="fieldMappingSection" class="mt-4 hidden">
-                <h3 class="text-md font-medium text-gray-700 mb-2">Available Form Field Groups:</h3>
-                <div id="mappingContainer">
-                    <!-- Mapping dropdowns will be inserted here dynamically -->
-                </div>
-                <div class="flex items-center mt-4">
-                    <label class="checkbox-label mr-3 text-sm">
-                        <input type="checkbox" id="fillEmptyOnlyCheckbox" class="mr-2">
-                        Fill only empty fields
+        <!-- Auto Fill Section -->
+        <section id="autoFillSection" class="tab-content">
+            <h2 class="section-heading text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700"><i class="fas fa-magic mr-2 text-blue-500"></i>Auto Fill Data</h2>
+            
+            <!-- Step 1: Upload File -->
+            <div class="card mb-6">
+                <h3 class="card-heading text-md md:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3"><i class="fas fa-upload mr-2 text-blue-500"></i>1. Upload File</h3>
+                <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">Supported: <span class="font-medium text-gray-700 dark:text-gray-300">.XLS, .XLSX, .ODS, .CSV, .XLSM, .XLSB.</span></p>
+                
+                <div class="drop-area" id="drop-area">
+                    <input type="file" id="fileInput" class="hidden" accept=".xls,.xlsx,.ods,.csv,.xlsm,.xlsb" />
+                    <p id="fileNameDisplay" class="text-gray-500 dark:text-gray-400 mb-4 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition duration-300 ease-in-out">
+                        Drag & Drop your file here, or
+                    </p>
+                    <label for="fileInput" class="browse-button">
+                        Browse File
                     </label>
                 </div>
-
-                <!-- NEW: Test Fill / Preview Buttons -->
-                <div class="flex flex-col space-y-2 mt-4">
-                    <button id="testFillButton" class="btn-secondary w-full">Test Fill First Row</button>
-                    <button id="previewValuesButton" class="btn-secondary w-full">Preview Mapped Values</button>
+                
+                <div id="fileStatusMessage" class="file-status mt-4 hidden">
+                    <i id="fileStatusIcon" class="text-xl mr-3"></i>
+                    <span id="fileMessage" class="text-lg font-medium"></span>
                 </div>
-                <div id="testFillMessage" class="message-box mt-3 hidden"></div>
-                <div id="previewValuesMessage" class="message-box mt-3 hidden"></div>
             </div>
 
-            <button id="fillDataButton" class="btn-primary w-full mt-6">Fill Data</button>
-            <!-- One-Click Autofill Button -->
-            <button id="oneClickAutofillButton" class="btn-primary w-full mt-2 hidden">One-Click Autofill (Auto-Map & Fill)</button>
-            <div id="fillDataMessage" class="message-box mt-3 hidden"></div>
+            <!-- Step 2: Display Headers and Scan Form -->
+            <div id="dataDisplaySection" class="card hidden">
+                <h3 class="card-heading text-md md:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3"><i class="fas fa-map-marker-alt mr-2 text-blue-500"></i>2. Map Fields</h3>
+
+                <div class="mb-4">
+                    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">File Headers:</h4>
+                    <div id="headersDisplay" class="headers-list">
+                        <!-- Headers will be displayed here dynamically -->
+                    </div>
+                </div>
+
+                <button id="scanFieldsButton" class="action-button emerald w-full mb-4">
+                    <i class="fas fa-sync-alt mr-2"></i>Scan Current Tab for Fields
+                </button>
+                <div id="scanMessage" class="message-box mt-3 hidden"></div>
+
+                <!-- Field Mapping Section -->
+                <div id="fieldMappingSection" class="mt-4 hidden">
+                    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Available Form Field Groups:</h4>
+                    <div id="mappingContainer">
+                        <!-- Mapping dropdowns will be inserted here dynamically -->
+                    </div>
+                    <div class="flex items-center mt-4">
+                        <label class="checkbox-label mr-3 text-sm">
+                            <input type="checkbox" id="fillEmptyOnlyCheckbox" class="mr-2">
+                            Fill only empty fields
+                        </label>
+                    </div>
+
+                    <!-- Test Fill / Preview Buttons -->
+                    <div class="flex flex-col space-y-2 mt-4">
+                        <button id="testFillButton" class="action-button secondary w-full">
+                            <i class="fas fa-vial mr-2"></i>Test Fill First Row
+                        </button>
+                        <div id="testFillMessage" class="message-box mt-3 hidden"></div>
+                        <button id="previewValuesButton" class="action-button secondary w-full">
+                            <i class="fas fa-eye mr-2"></i>Preview Mapped Values
+                        </button>
+                        <div id="previewValuesMessage" class="message-box mt-3 hidden"></div>
+                    </div>
+                </div>
+
+                <button id="fillDataButton" class="action-button primary w-full mt-6">
+                    <i class="fas fa-paper-plane mr-2"></i>Fill Data
+                </button>
+                <button id="oneClickAutofillButton" class="action-button primary w-full mt-2 hidden text-sm py-1.5 px-2">
+                    <i class="fas fa-magic mr-1 text-sm"></i>One-Click Autofill (Auto-Map &amp; Fill)
+                </button>
+                <div id="fillDataMessage" class="message-box mt-3 hidden"></div>
+            </div>
+        </section>
+
+        <!-- Auto Click Section -->
+        <section id="autoClickSection" class="tab-content hidden">
+            <h2 class="section-heading text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700"><i class="fas fa-mouse-pointer mr-2 text-indigo-500"></i>Auto Click Buttons</h2>
+            <div id="autoClickMessage" class="message-box mb-4 hidden"></div>
+            
+            <!-- Step 1: Scan for Clickable Elements -->
+            <div class="card mb-6">
+                <h3 class="card-heading text-md md:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3"><i class="fas fa-search mr-2 text-indigo-500"></i>1. Scan for Clickable Elements</h3>
+                <p class="text-gray-600 dark:text-gray-400 text-sm mb-3">Find buttons and other clickable elements on the current page.</p>
+                <button id="scanButtons" class="action-button secondary w-full">
+                    <i class="fas fa-sync-alt mr-2"></i>Scan for Clickable Buttons
+                </button>
+            </div>
+            
+            <!-- Step 2: Select a Button -->
+            <div id="selectButtonCard" class="card hidden mb-6">
+                <h3 class="card-heading text-md md:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3"><i class="fas fa-hand-pointer mr-2 text-indigo-500"></i>2. Select a Button</h3>
+                <div id="clickableButtonsContainer" class="max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 p-2 mb-4">
+                    <!-- Clickable buttons will be listed here -->
+                    <p class="text-gray-500 dark:text-gray-400 text-sm p-2">No buttons found yet. Click 'Scan' above.</p>
+                </div>
+            </div>
+
+            <!-- Step 3: Choose Number of Clicks -->
+            <div id="clickControlSection" class="card hidden">
+                <h3 class="card-heading text-md md:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3"><i class="fas fa-play-circle mr-2 text-indigo-500"></i>3. Choose Number of Clicks & Execute</h3>
+                <label for="clickCount" class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Number of clicks:</label>
+                <input type="number" id="clickCount" value="1" min="1" class="mb-4 form-input" />
+                <button id="startClicking" class="action-button primary w-full">
+                    <i class="fas fa-bullseye mr-2"></i>Start Clicking
+                </button>
+            </div>
         </section>
     </div>
 
@@ -145,10 +154,10 @@
         // Global error handler for better debugging
         window.onerror = function (msg, url, lineNo, columnNo, error) {
             console.error('Global Error (popup.html):', { msg, url, lineNo, columnNo, error });
-            const errorMessageElement = document.getElementById('fillDataMessage'); // Or a dedicated error box
+            const errorMessageElement = document.getElementById('fileStatusMessage') || document.getElementById('scanMessage') || document.getElementById('fillDataMessage') || document.getElementById('autoClickMessage');
             if (errorMessageElement) {
-                errorMessageElement.textContent = `An unexpected error occurred: ${msg}. Check console for details.`;
-                errorMessageElement.className = 'message-box mt-3 message-error';
+                errorMessageElement.innerHTML = `<i class="fas fa-exclamation-circle text-red-500 text-xl mr-3"></i><span class="text-lg font-medium">An unexpected error occurred: <strong>${msg}</strong>. Check console for details.</span>`;
+                errorMessageElement.className = 'file-status message-error';
                 errorMessageElement.classList.remove('hidden');
             }
         };

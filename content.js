@@ -14,13 +14,28 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'scanFields') {
         const fields = scanForFormFields();
         sendResponse({ fields: fields });
-    } else if (request.action === 'fillBatch') { // NEW: Handle batched filling
+        return true; // Keep the message channel open for async response
+    } else if (request.action === 'fillBatch') { // Handle batched filling
         const { dataBatch, fillEmptyOnly } = request;
         const result = fillFormFieldsBatch(dataBatch, fillEmptyOnly);
         sendResponse(result);
+        return true; // Keep the message channel open for async response
+    } else if (request.action === "scanClickables") { // Handle scanClickables
+        const elements = getClickableElements();
+        sendResponse({ clickables: elements });
+        return true; // Keep the message channel open for async response
+    } else if (request.action === "performClick") { // Handle performClick
+        // Call the async function and then send the response
+        clickElementByStableId(request.stableId, request.count).then(result => {
+            sendResponse({
+                status: result.success ? "success" : "error",
+                message: result.message || ""
+            });
+        });
+        return true; // This is crucial: indicates that sendResponse will be called asynchronously
     }
     // Return true to indicate that the response will be sent asynchronously
-    return true;
+    // (already handled above for each specific action that might involve async operations)
 });
 
 /**
@@ -34,7 +49,7 @@ function scanForFormFields() {
     const elements = document.querySelectorAll('input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]), textarea, select');
 
     elements.forEach((element, index) => {
-        // NEW: Generate a more stable and readable ID if the element doesn't have one.
+        // Generate a more stable and readable ID if the element doesn't have one.
         // Prioritize existing ID, then name, then placeholder, then a generated stable ID.
         let fieldId = element.id || element.name || element.placeholder || `stable-id-${index}-${Date.now()}`;
         // Ensure the ID is unique and valid for DOM selection
@@ -256,4 +271,96 @@ function fillFormFieldsBatch(dataBatch, fillEmptyOnly) {
     });
 
     return { status: 'success', filledCount: filledCount, skippedCount: skippedCount };
+}
+
+/**
+ * NEW: Scans the current web page for clickable elements.
+ * @returns {Array<Object>} An array of objects, each representing a clickable element.
+ */
+function getClickableElements() {
+    // Select common clickable elements: buttons, input type="button", links with href, and elements with role="button"
+    const buttons = [...document.querySelectorAll('button, input[type="button"], a[href], [role="button"], [onclick], [tabindex="0"][aria-pressed], [tabindex="0"][aria-expanded], [tabindex="0"][role]:not([role="textbox"]):not([role="searchbox"]):not([role="combobox"]):not([role="slider"])')];
+    
+    // Filter out hidden elements, and elements that are likely part of other controls (like text inputs within a search button container)
+    const filteredButtons = buttons.filter(el => {
+        const style = window.getComputedStyle(el);
+        const isVisible = style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+        const rect = el.getBoundingClientRect();
+        const hasSize = rect.width > 0 && rect.height > 0;
+        
+        // Exclude elements that are disabled or have a disabled attribute
+        if (el.disabled || el.getAttribute('aria-disabled') === 'true') {
+            return false;
+        }
+
+        // Exclude inputs that are not explicitly buttons
+        if (el.tagName === 'INPUT' && el.type !== 'button' && el.type !== 'submit' && el.type !== 'reset') {
+            return false;
+        }
+
+        // Exclude links that are just anchors with no real action (e.g., # or javascript:void(0))
+        if (el.tagName === 'A' && (!el.href || el.href.trim() === '#' || el.href.startsWith('javascript:void(0)'))) {
+            return false;
+        }
+
+        return isVisible && hasSize;
+    });
+
+    return filteredButtons.map((el, index) => {
+        // Prefer text content, then aria-label, then title for a human-readable label
+        const text = el.innerText?.trim() || "";
+        const aria = el.getAttribute("aria-label")?.trim() || "";
+        const title = el.getAttribute("title")?.trim() || "";
+        const name = el.getAttribute("name")?.trim() || "";
+        const id = el.id?.trim() || "";
+
+        let label = text || aria || title || name || id || `Element #${index + 1}`;
+        if (label.length > 50) { // Truncate long labels for display
+            label = label.substring(0, 47) + '...';
+        }
+
+        // Generate a stable ID for the element if it doesn't have one or if it's not unique
+        let stableId = el.id || `autoClick-${index}-${Date.now()}`;
+        if (!el.id) {
+            // Ensure generated ID is unique on the page
+            let tempId = stableId;
+            let counter = 0;
+            while (document.getElementById(tempId)) {
+                tempId = `${stableId}-${counter++}`;
+            }
+            el.id = tempId; // Assign the generated ID to the element for easier future lookup
+            stableId = tempId;
+        }
+        
+        // Add a data attribute for easier direct selection in the content script
+        el.setAttribute("data-auto-click-id", stableId);
+
+        return { text: label, stableId: stableId }; // Return the chosen label and stable ID
+    });
+}
+
+/**
+ * NEW: Performs a click on an element identified by its stable ID, with a delay between clicks.
+ * @param {string} stableId - The stable ID of the element to click.
+ * @param {number} count - The number of times to click the element.
+ * @returns {Object} An object indicating success or failure and a message.
+ */
+async function clickElementByStableId(stableId, count) {
+    // Select using the data-auto-click-id attribute
+    const target = document.querySelector(`[data-auto-click-id="${stableId}"]`);
+    
+    if (!target) {
+        return { success: false, message: "Target element not found on the page." };
+    }
+
+    try {
+        for (let i = 0; i < count; i++) {
+            target.click(); // Perform the click event
+            await new Promise(resolve => setTimeout(resolve, 300)); // 300ms delay between clicks
+        }
+        return { success: true };
+    } catch (error) {
+        console.error("Error simulating click:", error);
+        return { success: false, message: `Error during click simulation: ${error.message}` };
+    }
 }

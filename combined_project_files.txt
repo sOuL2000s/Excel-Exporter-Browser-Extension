@@ -1,7 +1,4 @@
 
---- START FILE: combined_project_files.txt ---
-
-
 --- START FILE: combine_project.py ---
 
 import os
@@ -84,13 +81,28 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'scanFields') {
         const fields = scanForFormFields();
         sendResponse({ fields: fields });
-    } else if (request.action === 'fillBatch') { // NEW: Handle batched filling
+        return true; // Keep the message channel open for async response
+    } else if (request.action === 'fillBatch') { // Handle batched filling
         const { dataBatch, fillEmptyOnly } = request;
         const result = fillFormFieldsBatch(dataBatch, fillEmptyOnly);
         sendResponse(result);
+        return true; // Keep the message channel open for async response
+    } else if (request.action === "scanClickables") { // Handle scanClickables
+        const elements = getClickableElements();
+        sendResponse({ clickables: elements });
+        return true; // Keep the message channel open for async response
+    } else if (request.action === "performClick") { // Handle performClick
+        // Call the async function and then send the response
+        clickElementByStableId(request.stableId, request.count).then(result => {
+            sendResponse({
+                status: result.success ? "success" : "error",
+                message: result.message || ""
+            });
+        });
+        return true; // This is crucial: indicates that sendResponse will be called asynchronously
     }
     // Return true to indicate that the response will be sent asynchronously
-    return true;
+    // (already handled above for each specific action that might involve async operations)
 });
 
 /**
@@ -104,7 +116,7 @@ function scanForFormFields() {
     const elements = document.querySelectorAll('input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]), textarea, select');
 
     elements.forEach((element, index) => {
-        // NEW: Generate a more stable and readable ID if the element doesn't have one.
+        // Generate a more stable and readable ID if the element doesn't have one.
         // Prioritize existing ID, then name, then placeholder, then a generated stable ID.
         let fieldId = element.id || element.name || element.placeholder || `stable-id-${index}-${Date.now()}`;
         // Ensure the ID is unique and valid for DOM selection
@@ -328,1321 +340,96 @@ function fillFormFieldsBatch(dataBatch, fillEmptyOnly) {
     return { status: 'success', filledCount: filledCount, skippedCount: skippedCount };
 }
 
-
---- END FILE: content.js ---
-
---- START FILE: manifest.json ---
-
-{
-    "manifest_version": 3,
-    "name": "Spreadsheet Data Filler",
-    "version": "1.0",
-    "description": "Upload a spreadsheet, map columns to fields on the current tab, and fill them.",
-    "permissions": [
-        "activeTab",
-        "scripting"
-    ],
-    "action": {
-        "default_popup": "popup.html",
-        "default_icon": {
-            "16": "icons/icon16.png",
-            "48": "icons/icon48.png",
-            "128": "icons/icon128.png"
-        }
-    },
-    "icons": {
-        "16": "icons/icon16.png",
-        "48": "icons/icon48.png",
-        "128": "icons/icon128.png"
-    },
-    "web_accessible_resources": [
-        {
-            "resources": [ "icons/*.png" ],
-            "matches": [ "<all_urls>" ]
-        }
-    ]
-}
-
-
---- END FILE: manifest.json ---
-
---- START FILE: popup.html ---
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spreadsheet Data Filler</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Inter font -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Fuse.js CDN for fuzzy matching -->
-    <script src="https://cdn.jsdelivr.net/npm/fuse.js/dist/fuse.min.js"></script>
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6; /* Light gray background */
-            width: 400px; /* Fixed width for the popup */
-            padding: 1rem;
-        }
-        .container {
-            padding: 1rem;
-            background-color: #ffffff;
-            border-radius: 0.75rem; /* Rounded corners */
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-        .btn-primary {
-            @apply bg-blue-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75;
-        }
-        .btn-secondary {
-            @apply bg-gray-300 text-gray-800 px-4 py-2 rounded-lg shadow-md hover:bg-gray-400 transition duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-75;
-        }
-        input[type="text"], select {
-            @apply border border-gray-300 rounded-md p-2 w-full focus:ring-2 focus:ring-blue-500 focus:border-transparent;
-        }
-        .file-input-label {
-            @apply block w-full text-center py-3 px-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:text-blue-600 transition duration-300 ease-in-out;
-        }
-        .file-input-label input[type="file"] {
-            display: none;
-        }
-        /* Styling for grouped field items */
-        .field-mapping-group-item {
-            @apply flex flex-col mb-4 p-4 bg-gray-50 rounded-lg shadow-sm;
-        }
-        .checkbox-label {
-            @apply flex items-center cursor-pointer;
-        }
-        .checkbox-label input[type="checkbox"] {
-            @apply h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500;
-        }
-        .message-box {
-            @apply p-3 rounded-md text-sm;
-        }
-        .message-success {
-            @apply bg-green-100 text-green-800;
-        }
-        .message-error {
-            @apply bg-red-100 text-red-800;
-        }
-        .message-info {
-            @apply bg-blue-100 text-blue-800;
-        }
-        .loading-spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            border-left-color: #2563eb;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
-            display: inline-block;
-            vertical-align: middle;
-            margin-left: 0.5rem;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        /* NEW: Styling for auto-matched badge */
-        .auto-matched-badge {
-            @apply inline-block bg-green-200 text-green-800 text-xs font-medium px-2 py-0.5 rounded-full ml-2;
-        }
-    </style>
-</head>
-<body class="antialiased">
-    <div class="container">
-        <h1 class="text-xl font-bold text-center text-gray-800 mb-4">Spreadsheet Data Filler</h1>
-
-        <!-- Step 1: Upload File -->
-        <section class="mb-6 p-4 border border-gray-200 rounded-lg">
-            <h2 class="text-lg font-semibold text-gray-700 mb-3">1. Upload File</h2>
-            <p class="text-gray-600 text-sm mb-3">Supported: .XLS, .XLSX, .ODS, .CSV, .XLSM, .XLSB.</p>
-            <label for="fileInput" class="file-input-label">
-                <span id="fileNameDisplay" class="text-gray-500">Click or drag file here</span>
-                <input type="file" id="fileInput" accept=".xls,.xlsx,.ods,.csv,.xlsm,.xlsb" />
-            </label>
-            <div id="fileUploadMessage" class="message-box mt-3 hidden"></div>
-        </section>
-
-        <!-- Step 2: Display Headers and Scan Form -->
-        <section id="dataDisplaySection" class="mb-6 p-4 border border-gray-200 rounded-lg hidden">
-            <h2 class="text-lg font-semibold text-gray-700 mb-3">2. Map Fields</h2>
-
-            <div class="mb-4">
-                <h3 class="text-md font-medium text-gray-700 mb-2">File Headers:</h3>
-                <div id="headersDisplay" class="bg-gray-100 p-3 rounded-md text-gray-700 text-xs overflow-x-auto">
-                    <!-- Headers will be displayed here -->
-                </div>
-            </div>
-
-            <button id="scanFieldsButton" class="btn-secondary w-full mb-4">Scan Current Tab for Fields</button>
-            <div id="scanMessage" class="message-box mt-3 hidden"></div>
-
-            <!-- Field Mapping Section -->
-            <div id="fieldMappingSection" class="mt-4 hidden">
-                <h3 class="text-md font-medium text-gray-700 mb-2">Available Form Field Groups:</h3>
-                <div id="mappingContainer">
-                    <!-- Mapping dropdowns will be inserted here dynamically -->
-                </div>
-                <div class="flex items-center mt-4">
-                    <label class="checkbox-label mr-3 text-sm">
-                        <input type="checkbox" id="fillEmptyOnlyCheckbox" class="mr-2">
-                        Fill only empty fields
-                    </label>
-                </div>
-
-                <!-- NEW: Test Fill / Preview Buttons -->
-                <div class="flex flex-col space-y-2 mt-4">
-                    <button id="testFillButton" class="btn-secondary w-full">Test Fill First Row</button>
-                    <button id="previewValuesButton" class="btn-secondary w-full">Preview Mapped Values</button>
-                </div>
-                <div id="testFillMessage" class="message-box mt-3 hidden"></div>
-                <div id="previewValuesMessage" class="message-box mt-3 hidden"></div>
-            </div>
-
-            <button id="fillDataButton" class="btn-primary w-full mt-6">Fill Data</button>
-            <!-- One-Click Autofill Button -->
-            <button id="oneClickAutofillButton" class="btn-primary w-full mt-2 hidden">One-Click Autofill (Auto-Map & Fill)</button>
-            <div id="fillDataMessage" class="message-box mt-3 hidden"></div>
-        </section>
-    </div>
-
-    <!-- SheetJS Library - NOW LOCAL -->
-    <script src="xlsx.full.min.js"></script>
-    <script src="popup.js"></script>
-    <script>
-        // Global error handler for better debugging
-        window.onerror = function (msg, url, lineNo, columnNo, error) {
-            console.error('Global Error (popup.html):', { msg, url, lineNo, columnNo, error });
-            const errorMessageElement = document.getElementById('fillDataMessage'); // Or a dedicated error box
-            if (errorMessageElement) {
-                errorMessageElement.textContent = `An unexpected error occurred: ${msg}. Check console for details.`;
-                errorMessageElement.className = 'message-box mt-3 message-error';
-                errorMessageElement.classList.remove('hidden');
-            }
-        };
-    </script>
-</body>
-</html>
-
-
---- END FILE: popup.html ---
-
---- START FILE: popup.js ---
-
-// Global variables to store parsed data and headers
-let workbook = null;
-let sheetData = []; // Stores all data from the first sheet (including headers as first row)
-let headers = [];   // Stores the first row (headers)
-let availableFormFields = []; // Stores fields found on the active tab
-let groupedFormFields = {}; // Stores fields grouped by their 'surroundingText' or derived name
-let learnedMappings = {}; // Stores user's preferred mappings for schema learning
-
-// DOM Elements
-const fileInput = document.getElementById('fileInput');
-const fileNameDisplay = document.getElementById('fileNameDisplay');
-const fileUploadMessage = document.getElementById('fileUploadMessage');
-const dataDisplaySection = document.getElementById('dataDisplaySection');
-const headersDisplay = document.getElementById('headersDisplay');
-const scanFieldsButton = document.getElementById('scanFieldsButton');
-const scanMessage = document.getElementById('scanMessage');
-const fieldMappingSection = document.getElementById('fieldMappingSection');
-const mappingContainer = document.getElementById('mappingContainer');
-const fillDataButton = document.getElementById('fillDataButton');
-const fillDataMessage = document.getElementById('fillDataMessage');
-const fillEmptyOnlyCheckbox = document.getElementById('fillEmptyOnlyCheckbox');
-const oneClickAutofillButton = document.getElementById('oneClickAutofillButton'); // Autofill button
-const testFillButton = document.getElementById('testFillButton'); // NEW: Test Fill button
-const previewValuesButton = document.getElementById('previewValuesButton'); // NEW: Preview button
-const testFillMessage = document.getElementById('testFillMessage'); // NEW: Test Fill message box
-const previewValuesMessage = document.getElementById('previewValuesMessage'); // NEW: Preview message box
-
-// --- Event Listeners ---
-
-// File input change
-fileInput.addEventListener('change', handleFile);
-
-// Drag and drop functionality for file input
-fileInput.parentElement.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    e.currentTarget.classList.add('border-blue-500', 'text-blue-600');
-});
-fileInput.parentElement.addEventListener('dragleave', (e) => {
-    e.preventDefault();
-    e.currentTarget.classList.remove('border-blue-500', 'text-blue-600');
-});
-fileInput.parentElement.addEventListener('drop', (e) => {
-    e.preventDefault();
-    e.currentTarget.classList.remove('border-blue-500', 'text-blue-600');
-    if (e.dataTransfer.files.length > 0) {
-        fileInput.files = e.dataTransfer.files;
-        handleFile();
-    }
-});
-
-// Scan fields button click
-scanFieldsButton.addEventListener('click', async () => {
-    await scanCurrentTabFields();
-});
-
-// Fill data button click
-fillDataButton.addEventListener('click', () => fillDataInTab(false)); // Manual fill
-
-// One-Click Autofill button click
-oneClickAutofillButton.addEventListener('click', () => fillDataInTab(true)); // Auto-fill
-
-// NEW: Test Fill button click
-testFillButton.addEventListener('click', () => testFillFirstRow());
-
-// NEW: Preview Values button click
-previewValuesButton.addEventListener('click', () => previewMappedValues());
-
-// Load learned mappings on startup
-document.addEventListener('DOMContentLoaded', loadLearnedMappings);
-
-// --- Functions ---
-
 /**
- * Handles the file selection and reads its content.
+ * NEW: Scans the current web page for clickable elements.
+ * @returns {Array<Object>} An array of objects, each representing a clickable element.
  */
-function handleFile() {
-    const file = fileInput.files[0];
-    if (!file) {
-        displayMessage(fileUploadMessage, 'No file selected.', 'error');
-        return;
-    }
-
-    fileNameDisplay.textContent = file.name;
-    displayMessage(fileUploadMessage, `Reading "${file.name}"...`, 'info');
-
-    const reader = new FileReader();
-
-    reader.onload = function(e) {
-        try {
-            const data = new Uint8Array(e.target.result);
-            // Read the workbook
-            workbook = XLSX.read(data, { type: 'array' });
-
-            // Get the first sheet name
-            const sheetName = workbook.SheetNames[0];
-            // Convert the first sheet to JSON, ensuring header:1 to get raw array of arrays
-            sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
-
-            if (sheetData.length === 0) {
-                displayMessage(fileUploadMessage, 'The selected file is empty or could not be parsed.', 'error');
-                dataDisplaySection.classList.add('hidden');
-                oneClickAutofillButton.classList.add('hidden'); // Hide autofill if no data
-                return;
-            }
-
-            // The first row is the headers
-            headers = sheetData[0];
-            
-            displayHeaders(headers);
-            dataDisplaySection.classList.remove('hidden');
-            displayMessage(fileUploadMessage, `File "${file.name}" loaded successfully.`, 'success');
-
-            // If fields were already scanned, re-setup mapping with new headers and re-auto-map
-            if (Object.keys(groupedFormFields).length > 0) { // Check groupedFormFields for existing scan
-                setupFieldMapping(groupedFormFields, headers); // Re-setup mapping with new headers
-                autoMapFields(groupedFormFields, headers); // Re-run auto-map
-                fieldMappingSection.classList.remove('hidden');
-                oneClickAutofillButton.classList.remove('hidden'); // Show autofill if fields and headers exist
-            } else {
-                // If no fields scanned yet, hide autofill button
-                oneClickAutofillButton.classList.add('hidden');
-            }
-
-        } catch (error) {
-            console.error("Error reading file:", error);
-            displayMessage(fileUploadMessage, `Error reading file: ${error.message}. Please ensure it's a valid spreadsheet format.`, 'error');
-            dataDisplaySection.classList.add('hidden');
-            oneClickAutofillButton.classList.add('hidden');
-        }
-    };
-
-    reader.onerror = function(e) {
-        console.error("FileReader error:", e);
-        displayMessage(fileUploadMessage, `Error reading file: ${e.target.error.name}.`, 'error');
-        dataDisplaySection.classList.add('hidden');
-        oneClickAutofillButton.classList.add('hidden');
-    };
-
-    reader.readAsArrayBuffer(file);
-}
-
-/**
- * Displays the extracted headers in the UI.
- * @param {string[]} headersArray - Array of header strings.
- */
-function displayHeaders(headersArray) {
-    headersDisplay.innerHTML = ''; // Clear previous headers
-    if (headersArray.length > 0) {
-        headersArray.forEach(header => {
-            const span = document.createElement('span');
-            span.className = 'inline-block bg-blue-100 text-blue-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full mb-2';
-            span.textContent = header;
-            headersDisplay.appendChild(span);
-        });
-    } else {
-        headersDisplay.textContent = 'No headers found in the first row.';
-    }
-}
-
-/**
- * Sends a message to the content script to scan for form fields.
- */
-async function scanCurrentTabFields() {
-    if (!headers || headers.length === 0) {
-        displayMessage(scanMessage, 'Please upload a file with headers first.', 'error');
-        return;
-    }
-
-    displayMessage(scanMessage, 'Scanning current tab for fields...', 'info');
-    scanFieldsButton.disabled = true; // Disable button during scan
-    scanFieldsButton.innerHTML = 'Scanning... <span class="loading-spinner"></span>';
-    oneClickAutofillButton.classList.add('hidden'); // Hide autofill button during scan
-
-    try {
-        // Get the active tab
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (!tab) {
-            displayMessage(scanMessage, 'Could not get active tab.', 'error');
-            return;
-        }
-
-        // Inject content script if not already injected and send message to scan
-        const response = await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            files: ['content.js'] // Inject content.js
-        }).then(() => {
-            // Once injected, send a message to the content script to perform the scan
-            return chrome.tabs.sendMessage(tab.id, { action: 'scanFields' });
-        });
-
-        if (response && response.fields) {
-            availableFormFields = response.fields;
-            if (availableFormFields.length > 0) {
-                groupedFormFields = groupFieldsBySignature(availableFormFields); // NEW: Use smarter grouping
-                setupFieldMapping(groupedFormFields, headers); // Call existing setup to build UI with grouped fields
-                autoMapFields(groupedFormFields, headers); // Call auto-map to pre-select dropdowns for groups
-                fieldMappingSection.classList.remove('hidden');
-                displayMessage(scanMessage, `Found ${availableFormFields.length} fields on the page, grouped into ${Object.keys(groupedFormFields).length} sections. Attempting auto-mapping.`, 'success');
-                oneClickAutofillButton.classList.remove('hidden'); // Show autofill button if fields found
-            } else {
-                fieldMappingSection.classList.add('hidden');
-                displayMessage(scanMessage, 'No input fields found on the current tab.', 'info');
-                oneClickAutofillButton.classList.add('hidden'); // Hide autofill button if no fields
-            }
-        } else {
-            fieldMappingSection.classList.add('hidden');
-            displayMessage(scanMessage, 'Failed to get fields from the current tab.', 'error');
-            oneClickAutofillButton.classList.add('hidden'); // Hide autofill button if error
-        }
-    } catch (error) {
-        console.error("Error scanning fields:", error);
-        displayMessage(scanMessage, `Error scanning fields: ${error.message}.`, 'error');
-        fieldMappingSection.classList.add('hidden');
-        oneClickAutofillButton.classList.add('hidden'); // Hide autofill button if error
-    } finally {
-        scanFieldsButton.disabled = false;
-        scanFieldsButton.innerHTML = 'Scan Current Tab for Fields';
-    }
-}
-
-/**
- * NEW: Generates a comprehensive signature for a form field using multiple attributes.
- * This signature is used for smarter grouping and fuzzy matching.
- * @param {Object} field - The field object from content.js.
- * @returns {string} A combined string representing the field's unique signature.
- */
-function generateFieldSignature(field) {
-    const parts = [
-        field.labelText,
-        field.name,
-        field.placeholder,
-        field.ariaLabel,
-        field.title,
-        field.autocomplete, // Include autocomplete for better context
-        field.surroundingText // This is already quite good, but combine with others
-    ].filter(Boolean) // Remove empty strings
-     .map(str => str.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim()) // Clean and normalize
-     .filter(str => str.length > 1); // Remove very short, non-descriptive parts
-
-    // Use a Set to ensure unique parts, then join
-    return [...new Set(parts)].join(" | ");
-}
-
-/**
- * NEW: Groups form fields by their generated signature to create logical sections.
- * @param {Array<Object>} formFields - Array of field objects from content.js.
- * @returns {Object} An object where keys are grouping contexts (signatures) and values are arrays of fields.
- */
-function groupFieldsBySignature(formFields) {
-    const groups = {};
-    formFields.forEach(field => {
-        const signature = generateFieldSignature(field);
-        // Use a fallback if the signature is empty or too generic
-        const groupIdentifier = signature || field.htmlId || 'Unnamed Field Group';
-        
-        if (!groups[groupIdentifier]) {
-            groups[groupIdentifier] = [];
-        }
-        groups[groupIdentifier].push(field);
-    });
-    return groups;
-}
-
-/**
- * Sets up the mapping section with dropdowns for each grouped form field context.
- * @param {Object} groupedFields - Object of grouped fields (e.g., { 'Context A': [field1, field2], 'Context B': [field3] }).
- * @param {string[]} headersArray - Array of header strings for dropdown options.
- */
-function setupFieldMapping(groupedFields, headersArray) {
-    mappingContainer.innerHTML = ''; // Clear previous mappings
-
-    const groupKeys = Object.keys(groupedFields);
-    if (groupKeys.length === 0) {
-        mappingContainer.textContent = 'No mappable field groups found on the page.';
-        return;
-    }
-
-    groupKeys.forEach(contextKey => {
-        const fieldsInGroup = groupedFields[contextKey];
-        const mappingGroupItem = document.createElement('div');
-        mappingGroupItem.className = 'field-mapping-group-item mb-6 p-4 border border-gray-200 rounded-lg bg-white'; // Styling for groups
-
-        const groupHeader = document.createElement('h3');
-        groupHeader.className = 'text-md font-semibold text-gray-800 mb-3 flex items-center'; // Added flex for badge
-        groupHeader.textContent = contextKey; // The grouping context (e.g., "Personal Information" or "Description")
-        mappingGroupItem.appendChild(groupHeader);
-
-        const groupControl = document.createElement('div');
-        groupControl.className = 'flex items-center space-x-2 mb-3';
-
-        const label = document.createElement('label');
-        label.className = 'checkbox-label flex-shrink-0';
-
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.className = 'group-checkbox mr-2';
-        checkbox.dataset.contextKey = contextKey; // Store the context key
-        checkbox.checked = false; // Initially unchecked
-
-        const span = document.createElement('span');
-        span.className = 'text-sm text-gray-700';
-        span.textContent = `Map fields for "${contextKey}"`;
-
-        label.appendChild(checkbox);
-        label.appendChild(span);
-        groupControl.appendChild(label);
-
-        const select = document.createElement('select');
-        select.className = 'group-mapper ml-auto flex-grow';
-        select.dataset.contextKey = contextKey;
-        select.disabled = true; // Initially disabled
-
-        const fragment = document.createDocumentFragment();
-        const defaultOption = document.createElement('option');
-        defaultOption.value = '';
-        defaultOption.textContent = '-- Select Column --';
-        fragment.appendChild(defaultOption);
-
-        headersArray.forEach(header => {
-            const option = document.createElement('option');
-            option.value = header;
-            option.textContent = header;
-            fragment.appendChild(option);
-        });
-        select.appendChild(fragment);
-        groupControl.appendChild(select);
-        mappingGroupItem.appendChild(groupControl);
-
-        // Display individual fields within this group (read-only)
-        const fieldListContainer = document.createElement('div');
-        fieldListContainer.className = 'mt-2 text-xs text-gray-600';
-        fieldListContainer.innerHTML = '<p class="font-medium mb-1">Instances of this field on page:</p>';
-        fieldsInGroup.forEach(field => {
-            // Determine a user-friendly name for display, avoiding generated IDs
-            let displayName = field.labelText || field.name || field.placeholder || field.ariaLabel || field.title || 'Unnamed Field Instance';
-            // Clean up name attribute if it contains array-like indexing
-            displayName = displayName.replace(/\[\d+\]/g, '').trim();
-
-            if (displayName.startsWith('stable-id-') || displayName.startsWith('generated-id-')) {
-                displayName = 'Unnamed Field Instance'; // Hide internal IDs from user
-            }
-
-            const fieldSpan = document.createElement('span');
-            fieldSpan.className = 'inline-block bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full mr-1 mb-1';
-            fieldSpan.textContent = displayName;
-            fieldListContainer.appendChild(fieldSpan);
-        });
-        mappingGroupItem.appendChild(fieldListContainer);
-
-        mappingContainer.appendChild(mappingGroupItem);
-
-        // Event listener for group checkbox
-        checkbox.addEventListener('change', (e) => {
-            const currentSelect = mappingContainer.querySelector(`.group-mapper[data-context-key="${e.target.dataset.contextKey}"]`);
-            currentSelect.disabled = !e.target.checked;
-            if (!e.target.checked) {
-                currentSelect.value = ''; // Clear selection if unchecked
-            }
-        });
-    });
-}
-
-/**
- * NEW: Performs intelligent auto-mapping between grouped form fields and spreadsheet headers using Fuse.js.
- * Populates the mapping dropdowns and checks the corresponding checkboxes for groups.
- * @param {Object} groupedFields - Object of grouped fields.
- * @param {string[]} headersArray - Array of header strings.
- */
-function autoMapFields(groupedFields, headersArray) {
-    // Load learned mappings first
-    loadLearnedMappings().then(() => {
-        const fuseOptions = {
-            includeScore: true,
-            threshold: 0.4, // Lower is stricter, 0.4 allows for some flexibility
-            keys: ['header']
-        };
-
-        const fuse = new Fuse(headersArray.map(h => ({ header: h })), fuseOptions);
-
-        let autoMappedCount = 0;
-        Object.keys(groupedFields).forEach(contextKey => {
-            const checkbox = mappingContainer.querySelector(`.group-checkbox[data-context-key="${contextKey}"]`);
-            const select = mappingContainer.querySelector(`.group-mapper[data-context-key="${contextKey}"]`);
-            const groupHeaderElement = checkbox.closest('.field-mapping-group-item').querySelector('h3'); // Get the h3 element for the badge
-
-            if (!checkbox || !select) return;
-
-            // 1. Try to apply learned mapping first
-            if (learnedMappings[contextKey] && headersArray.includes(learnedMappings[contextKey])) {
-                checkbox.checked = true;
-                select.disabled = false;
-                select.value = learnedMappings[contextKey];
-                addAutoMappedBadge(groupHeaderElement, 'Learned');
-                autoMappedCount++;
-                console.log(`Auto-mapping (Learned): "${contextKey}" -> "${learnedMappings[contextKey]}"`);
-                return; // Skip fuzzy matching if learned mapping applied
-            }
-
-            // 2. Fallback to fuzzy matching
-            const result = fuse.search(contextKey)[0];
-            if (result && result.score < 0.4) { // Confidence threshold
-                const bestMatchHeader = result.item.header;
-                checkbox.checked = true;
-                select.disabled = false;
-                select.value = bestMatchHeader;
-                addAutoMappedBadge(groupHeaderElement, `Score: ${result.score.toFixed(2)}`);
-                autoMappedCount++;
-                console.log(`Auto-mapping (Fuzzy): "${contextKey}" -> "${bestMatchHeader}" (Score: ${result.score.toFixed(2)})`);
-            } else {
-                // If not auto-mapped, ensure it's unchecked and disabled
-                checkbox.checked = false;
-                select.disabled = true;
-                select.value = '';
-                removeAutoMappedBadge(groupHeaderElement);
-                console.log(`No strong auto-mapping for "${contextKey}" (Best score: ${result?.score.toFixed(2) || 'N/A'})`);
-            }
-        });
-        displayMessage(scanMessage, `Auto-mapping complete. ${autoMappedCount} fields auto-mapped. Review and adjust if needed.`, 'success');
-    }).catch(error => {
-        console.error("Error loading learned mappings for auto-map:", error);
-        displayMessage(scanMessage, `Error loading learned mappings: ${error.message}. Auto-mapping proceeded without them.`, 'error');
-    });
-}
-
-/**
- * NEW: Adds an "Auto-Matched" badge to the group header.
- * @param {HTMLElement} groupHeaderElement - The H3 element of the group.
- * @param {string} text - Text to display in the badge (e.g., "Learned", "Score: 0.15").
- */
-function addAutoMappedBadge(groupHeaderElement, text) {
-    let badge = groupHeaderElement.querySelector('.auto-matched-badge');
-    if (!badge) {
-        badge = document.createElement('span');
-        badge.className = 'auto-matched-badge';
-        groupHeaderElement.appendChild(badge);
-    }
-    badge.textContent = `Auto-Matched (${text})`;
-}
-
-/**
- * NEW: Removes the "Auto-Matched" badge from the group header.
- * @param {HTMLElement} groupHeaderElement - The H3 element of the group.
- */
-function removeAutoMappedBadge(groupHeaderElement) {
-    const badge = groupHeaderElement.querySelector('.auto-matched-badge');
-    if (badge) {
-        badge.remove();
-    }
-}
-
-/**
- * Saves the currently selected mappings to chrome.storage.sync for future use.
- */
-async function saveLearnedMappings() {
-    const currentMappings = {};
-    mappingContainer.querySelectorAll('.group-checkbox:checked').forEach(checkbox => {
-        const contextKey = checkbox.dataset.contextKey;
-        const selectElement = mappingContainer.querySelector(`.group-mapper[data-context-key="${contextKey}"]`);
-        if (selectElement && selectElement.value) {
-            currentMappings[contextKey] = selectElement.value;
-        }
-    });
-
-    try {
-        await chrome.storage.sync.set({ learnedMappings: currentMappings });
-        console.log('Learned mappings saved:', currentMappings);
-    } catch (error) {
-        console.error('Error saving learned mappings:', error);
-    }
-}
-
-/**
- * Loads learned mappings from chrome.storage.sync.
- */
-async function loadLearnedMappings() {
-    try {
-        const result = await chrome.storage.sync.get('learnedMappings');
-        learnedMappings = result.learnedMappings || {};
-        console.log('Learned mappings loaded:', learnedMappings);
-    } catch (error) {
-        console.error('Error loading learned mappings:', error);
-    }
-}
-
-/**
- * Sends a message to the content script to fill the fields on the active tab.
- * This function now iterates through spreadsheet rows and prepares a batch for filling.
- * @param {boolean} isAutoFill - True if triggered by the "One-Click Autofill" button.
- */
-async function fillDataInTab(isAutoFill = false) {
-    if (!workbook || sheetData.length <= 1) { // sheetData includes headers, so >1 means actual data rows
-        displayMessage(fillDataMessage, 'Please upload a spreadsheet file first.', 'error');
-        return;
-    }
-    if (Object.keys(groupedFormFields).length === 0) {
-        displayMessage(fillDataMessage, 'Please scan for fields on the current tab first.', 'error');
-        return;
-    }
-
-    const actualDataRows = sheetData.slice(1); // Get data rows, excluding headers
-
-    const fillEmptyOnly = fillEmptyOnlyCheckbox.checked;
+function getClickableElements() {
+    // Select common clickable elements: buttons, input type="button", links with href, and elements with role="button"
+    const buttons = [...document.querySelectorAll('button, input[type="button"], a[href], [role="button"], [onclick], [tabindex="0"][aria-pressed], [tabindex="0"][aria-expanded], [tabindex="0"][role]:not([role="textbox"]):not([role="searchbox"]):not([role="combobox"]):not([role="slider"])')];
     
-    // Collect all selected mappings: { contextKey: mappedColumnHeader }
-    const selectedMappings = {};
-    mappingContainer.querySelectorAll('.group-checkbox:checked').forEach(checkbox => {
-        const contextKey = checkbox.dataset.contextKey;
-        const selectElement = mappingContainer.querySelector(`.group-mapper[data-context-key="${contextKey}"]`);
-        const mappedColumnHeader = selectElement ? selectElement.value : '';
-        if (mappedColumnHeader) {
-            selectedMappings[contextKey] = mappedColumnHeader;
+    // Filter out hidden elements, and elements that are likely part of other controls (like text inputs within a search button container)
+    const filteredButtons = buttons.filter(el => {
+        const style = window.getComputedStyle(el);
+        const isVisible = style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+        const rect = el.getBoundingClientRect();
+        const hasSize = rect.width > 0 && rect.height > 0;
+        
+        // Exclude elements that are disabled or have a disabled attribute
+        if (el.disabled || el.getAttribute('aria-disabled') === 'true') {
+            return false;
         }
+
+        // Exclude inputs that are not explicitly buttons
+        if (el.tagName === 'INPUT' && el.type !== 'button' && el.type !== 'submit' && el.type !== 'reset') {
+            return false;
+        }
+
+        // Exclude links that are just anchors with no real action (e.g., # or javascript:void(0))
+        if (el.tagName === 'A' && (!el.href || el.href.trim() === '#' || el.href.startsWith('javascript:void(0)'))) {
+            return false;
+        }
+
+        return isVisible && hasSize;
     });
 
-    if (Object.keys(selectedMappings).length === 0) {
-        displayMessage(fillDataMessage, 'No fields selected for filling or no column mapped to selected groups.', 'error');
-        return;
-    }
+    return filteredButtons.map((el, index) => {
+        // Prefer text content, then aria-label, then title for a human-readable label
+        const text = el.innerText?.trim() || "";
+        const aria = el.getAttribute("aria-label")?.trim() || "";
+        const title = el.getAttribute("title")?.trim() || "";
+        const name = el.getAttribute("name")?.trim() || "";
+        const id = el.id?.trim() || "";
 
-    displayMessage(fillDataMessage, 'Preparing data for filling...', 'info');
-    fillDataButton.disabled = true;
-    oneClickAutofillButton.disabled = true;
-    testFillButton.disabled = true;
-    previewValuesButton.disabled = true;
-
-    try {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (!tab) {
-            displayMessage(fillDataMessage, 'Could not get active tab.', 'error');
-            return;
+        let label = text || aria || title || name || id || `Element #${index + 1}`;
+        if (label.length > 50) { // Truncate long labels for display
+            label = label.substring(0, 47) + '...';
         }
 
-        const dataBatch = []; // This will hold all field-value pairs to send to content.js
-
-        // Iterate through each data row from the spreadsheet
-        actualDataRows.forEach((spreadsheetRow, rowIndex) => {
-            // For each mapped field type (contextKey), try to find and prepare data for its instances
-            for (const contextKey in selectedMappings) {
-                const mappedColumnHeader = selectedMappings[contextKey];
-                const columnIndex = headers.indexOf(mappedColumnHeader);
-
-                if (columnIndex !== -1) {
-                    // Get all field instances for this group
-                    const fieldsInThisGroup = groupedFormFields[contextKey];
-                    // Assuming sequential filling for now: target the Nth instance for the Nth spreadsheet row
-                    const targetField = fieldsInThisGroup[rowIndex]; 
-
-                    if (targetField) {
-                        const value = spreadsheetRow[columnIndex];
-                        // Ensure value is a string for form filling
-                        dataBatch.push({
-                            id: targetField.id,
-                            value: (value !== undefined && value !== null) ? String(value) : ''
-                        });
-                    } else {
-                        console.warn(`No form field instance found for group "${contextKey}" at form row index ${rowIndex}. This spreadsheet row might not have a corresponding form field instance.`);
-                    }
-                } else {
-                    console.warn(`Mapped column "${mappedColumnHeader}" not found in headers for group "${contextKey}". Skipping.`);
-                }
-            }
-        });
-
-        if (dataBatch.length === 0) {
-            displayMessage(fillDataMessage, 'No data prepared for filling based on current mappings and spreadsheet data.', 'info');
-            return;
-        }
-
-        displayMessage(fillDataMessage, `Sending ${dataBatch.length} fields for filling...`, 'info');
-
-        // Send the entire batch to the content script
-        const response = await chrome.tabs.sendMessage(tab.id, {
-            action: 'fillBatch',
-            dataBatch: dataBatch, // Send the array of {id, value} pairs
-            fillEmptyOnly: fillEmptyOnly
-        });
-
-        if (response && response.status === 'success') {
-            displayMessage(fillDataMessage, `Data filling complete! ${response.filledCount} fields filled, ${response.skippedCount} fields skipped.`, 'success');
-            saveLearnedMappings(); // Save successful mappings
-        } else {
-            console.error(`Error filling data: ${response?.message || 'Unknown error.'}`);
-            displayMessage(fillDataMessage, `Error filling data: ${response?.message || 'Unknown error.'}`, 'error');
-        }
-
-    } catch (error) {
-        console.error("Error filling data:", error);
-        displayMessage(fillDataMessage, `Error filling data: ${error.message}.`, 'error');
-    } finally {
-        fillDataButton.disabled = false;
-        oneClickAutofillButton.disabled = false;
-        testFillButton.disabled = false;
-        previewValuesButton.disabled = false;
-    }
-}
-
-/**
- * NEW: Fills only the first row of data for testing purposes.
- */
-async function testFillFirstRow() {
-    if (!workbook || sheetData.length <= 1) {
-        displayMessage(testFillMessage, 'Please upload a spreadsheet file with data first.', 'error');
-        return;
-    }
-    if (Object.keys(groupedFormFields).length === 0) {
-        displayMessage(testFillMessage, 'Please scan for fields on the current tab first.', 'error');
-        return;
-    }
-
-    const firstDataRow = sheetData[1]; // Get the first data row (index 1 after headers)
-    if (!firstDataRow) {
-        displayMessage(testFillMessage, 'No data rows found in the spreadsheet.', 'error');
-        return;
-    }
-
-    const fillEmptyOnly = fillEmptyOnlyCheckbox.checked;
-    const dataToFillForFirstRow = [];
-
-    const selectedMappings = {};
-    mappingContainer.querySelectorAll('.group-checkbox:checked').forEach(checkbox => {
-        const contextKey = checkbox.dataset.contextKey;
-        const selectElement = mappingContainer.querySelector(`.group-mapper[data-context-key="${contextKey}"]`);
-        const mappedColumnHeader = selectElement ? selectElement.value : '';
-        if (mappedColumnHeader) {
-            selectedMappings[contextKey] = mappedColumnHeader;
-        }
-    });
-
-    if (Object.keys(selectedMappings).length === 0) {
-        displayMessage(testFillMessage, 'No fields selected for filling or no column mapped.', 'error');
-        return;
-    }
-
-    // Prepare data for the first form "row" based on the first spreadsheet data row
-    for (const contextKey in selectedMappings) {
-        const mappedColumnHeader = selectedMappings[contextKey];
-        const columnIndex = headers.indexOf(mappedColumnHeader);
-
-        if (columnIndex !== -1) {
-            const fieldsInThisGroup = groupedFormFields[contextKey];
-            const targetField = fieldsInThisGroup[0]; // Target the first instance of this grouped field
-            if (targetField) {
-                const value = firstDataRow[columnIndex];
-                dataToFillForFirstRow.push({
-                    id: targetField.id,
-                    value: (value !== undefined && value !== null) ? String(value) : ''
-                });
-            } else {
-                console.warn(`No form field instance found for group "${contextKey}" at form row index 0 for test fill.`);
-            }
-        }
-    }
-
-    if (dataToFillForFirstRow.length === 0) {
-        displayMessage(testFillMessage, 'No data prepared for test filling based on current mappings and first spreadsheet row.', 'info');
-        return;
-    }
-
-    displayMessage(testFillMessage, 'Performing test fill for the first row...', 'info');
-    testFillButton.disabled = true;
-
-    try {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (!tab) {
-            displayMessage(testFillMessage, 'Could not get active tab.', 'error');
-            return;
-        }
-
-        const response = await chrome.tabs.sendMessage(tab.id, {
-            action: 'fillBatch',
-            dataBatch: dataToFillForFirstRow,
-            fillEmptyOnly: fillEmptyOnly
-        });
-
-        if (response && response.status === 'success') {
-            displayMessage(testFillMessage, `Test fill complete! ${response.filledCount} fields filled, ${response.skippedCount} fields skipped for the first row.`, 'success');
-        } else {
-            console.error(`Error during test fill: ${response?.message || 'Unknown error.'}`);
-            displayMessage(testFillMessage, `Error during test fill: ${response?.message || 'Unknown error.'}`, 'error');
-        }
-
-    } catch (error) {
-        console.error("Error during test fill:", error);
-        displayMessage(testFillMessage, `Error during test fill: ${error.message}.`, 'error');
-    } finally {
-        testFillButton.disabled = false;
-    }
-}
-
-/**
- * NEW: Displays a preview of mapped values for the first data row.
- */
-function previewMappedValues() {
-    if (!workbook || sheetData.length <= 1) {
-        displayMessage(previewValuesMessage, 'Please upload a spreadsheet file with data first.', 'error');
-        return;
-    }
-    if (Object.keys(groupedFormFields).length === 0) {
-        displayMessage(previewValuesMessage, 'Please scan for fields on the current tab first.', 'error');
-        return;
-    }
-
-    const firstDataRow = sheetData[1];
-    if (!firstDataRow) {
-        displayMessage(previewValuesMessage, 'No data rows found in the spreadsheet for preview.', 'error');
-        return;
-    }
-
-    const selectedMappings = {};
-    mappingContainer.querySelectorAll('.group-checkbox:checked').forEach(checkbox => {
-        const contextKey = checkbox.dataset.contextKey;
-        const selectElement = mappingContainer.querySelector(`.group-mapper[data-context-key="${contextKey}"]`);
-        const mappedColumnHeader = selectElement ? selectElement.value : '';
-        if (mappedColumnHeader) {
-            selectedMappings[contextKey] = mappedColumnHeader;
-        }
-    });
-
-    if (Object.keys(selectedMappings).length === 0) {
-        displayMessage(previewValuesMessage, 'No fields selected for preview or no column mapped.', 'error');
-        return;
-    }
-
-    let previewHtml = '<p class="font-semibold mb-2">Preview for First Data Row:</p>';
-    previewHtml += '<ul class="list-disc list-inside text-left">';
-
-    let hasPreviewData = false;
-    for (const contextKey in selectedMappings) {
-        const mappedColumnHeader = selectedMappings[contextKey];
-        const columnIndex = headers.indexOf(mappedColumnHeader);
-
-        if (columnIndex !== -1) {
-            const fieldsInThisGroup = groupedFormFields[contextKey];
-            const targetField = fieldsInThisGroup[0]; // Preview for the first instance of this grouped field
-            if (targetField) {
-                const value = firstDataRow[columnIndex];
-                let displayName = targetField.labelText || targetField.name || targetField.placeholder || 'Unnamed Field';
-                displayName = displayName.replace(/\[\d+\]/g, '').trim();
-                if (displayName.startsWith('stable-id-')) displayName = 'Unnamed Field Instance';
-
-                previewHtml += `<li><strong>${displayName}</strong> (mapped to "${mappedColumnHeader}"): <code>${(value !== undefined && value !== null) ? String(value) : '[Empty]'}</code></li>`;
-                hasPreviewData = true;
-            }
-        }
-    }
-    previewHtml += '</ul>';
-
-    if (hasPreviewData) {
-        displayMessage(previewValuesMessage, previewHtml, 'info', true); // Pass true for raw HTML
-    } else {
-        displayMessage(previewValuesMessage, 'No preview data available based on current selections.', 'info');
-    }
-}
-
-
-/**
- * Displays a temporary message in a designated message box.
- * @param {HTMLElement} element - The message box element.
- * @param {string} message - The message to display.
- * @param {'success'|'error'|'info'} type - The type of message for styling.
- * @param {boolean} isHtml - If true, message is treated as HTML.
- */
-function displayMessage(element, message, type, isHtml = false) {
-    if (isHtml) {
-        element.innerHTML = message;
-    } else {
-        element.textContent = message;
-    }
-    element.className = `message-box mt-3 ${type === 'success' ? 'message-success' : type === 'error' ? 'message-error' : 'message-info'}`;
-    element.classList.remove('hidden');
-    setTimeout(() => {
-        element.classList.add('hidden');
-        element.innerHTML = ''; // Clear content when hidden
-    }, 10000); // Hide after 10 seconds for preview, 5 for others
-}
-
-// Initial state: hide data display section and mapping section
-dataDisplaySection.classList.add('hidden');
-fieldMappingSection.classList.add('hidden');
-oneClickAutofillButton.classList.add('hidden'); // Ensure autofill button is hidden initially
-
-
-
---- END FILE: popup.js ---
-
-
---- END FILE: combined_project_files.txt ---
-
---- START FILE: combine_project.py ---
-
-import os
-
-def combine_files_to_single_file(root_dir, output_filename="combined_project_files.txt"):
-    """
-    Combines the content of all files in a directory into a single file,
-    excluding 'node_modules' directories and 'package-lock.json' files.
-
-    Args:
-        root_dir (str): The root directory of the project.
-        output_filename (str): The name of the output file.
-    """
-    combined_content = []
-    excluded_dirs = ['node_modules', '.git', '.vscode', '.idea', 'dist', 'build']
-    excluded_files = ['package-lock.json', 'yarn.lock', 'bun.lockb', '.env', 'xlsx.full.min.js'] # Added .env as it might contain sensitive info
-
-    print(f"Starting to combine files from: {root_dir}")
-    print(f"Excluding directories: {excluded_dirs}")
-    print(f"Excluding files: {excluded_files}")
-
-    for dirpath, dirnames, filenames in os.walk(root_dir):
-        # Modify dirnames in-place to skip excluded directories
-        dirnames[:] = [d for d in dirnames if d not in excluded_dirs]
-
-        for filename in filenames:
-            if filename in excluded_files:
-                print(f"Skipping excluded file: {os.path.join(dirpath, filename)}")
-                continue
-
-            file_path = os.path.join(dirpath, filename)
-            # Make path relative to root_dir for the header
-            relative_file_path = os.path.relpath(file_path, root_dir)
-
-            try:
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                
-                combined_content.append(f"\n--- START FILE: {relative_file_path} ---\n\n")
-                combined_content.append(content)
-                combined_content.append(f"\n\n--- END FILE: {relative_file_path} ---\n")
-                print(f"Included file: {relative_file_path}")
-            except UnicodeDecodeError:
-                print(f"Skipping binary or undecodable file (UnicodeDecodeError): {relative_file_path}")
-            except Exception as e:
-                print(f"Error reading file {relative_file_path}: {e}")
-
-    output_path = os.path.join(root_dir, output_filename)
-    try:
-        with open(output_path, 'w', encoding='utf-8') as outfile:
-            outfile.write("".join(combined_content))
-        print(f"\nSuccessfully combined all files into: {output_path}")
-    except Exception as e:
-        print(f"Error writing output file {output_path}: {e}")
-
-if __name__ == "__main__":
-    # Get the current working directory where the script is run
-    # This assumes you run the script from your project's root directory
-    project_root = os.getcwd()
-    combine_files_to_single_file(project_root)
-
-
---- END FILE: combine_project.py ---
-
---- START FILE: content.js ---
-
-/**
- * content.js
- * This script runs in the context of the web page.
- * It listens for messages from the extension's popup and performs DOM manipulations.
- */
-
-// Global error handler for better debugging in the content script context
-window.onerror = function (msg, url, lineNo, columnNo, error) {
-    console.error('Global Error (content.js):', { msg, url, lineNo, columnNo, error });
-};
-
-// Listen for messages from the popup script
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'scanFields') {
-        const fields = scanForFormFields();
-        sendResponse({ fields: fields });
-    } else if (request.action === 'fillBatch') { // NEW: Handle batched filling
-        const { dataBatch, fillEmptyOnly } = request;
-        const result = fillFormFieldsBatch(dataBatch, fillEmptyOnly);
-        sendResponse(result);
-    }
-    // Return true to indicate that the response will be sent asynchronously
-    return true;
-});
-
-/**
- * Scans the current web page for input fields, textareas, and select elements.
- * Gathers relevant information about each field, including enhanced metadata and a grouping context.
- * @returns {Array<Object>} An array of objects, each representing a form field.
- */
-function scanForFormFields() {
-    const fields = [];
-    // Select all relevant form elements, excluding hidden, submit, button, and reset types.
-    const elements = document.querySelectorAll('input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]), textarea, select');
-
-    elements.forEach((element, index) => {
-        // NEW: Generate a more stable and readable ID if the element doesn't have one.
-        // Prioritize existing ID, then name, then placeholder, then a generated stable ID.
-        let fieldId = element.id || element.name || element.placeholder || `stable-id-${index}-${Date.now()}`;
-        // Ensure the ID is unique and valid for DOM selection
-        if (!element.id) {
-            // Make sure the generated ID is unique on the page if it's not already
-            let tempId = fieldId;
+        // Generate a stable ID for the element if it doesn't have one or if it's not unique
+        let stableId = el.id || `autoClick-${index}-${Date.now()}`;
+        if (!el.id) {
+            // Ensure generated ID is unique on the page
+            let tempId = stableId;
             let counter = 0;
             while (document.getElementById(tempId)) {
-                tempId = `${fieldId}-${counter++}`;
+                tempId = `${stableId}-${counter++}`;
             }
-            element.id = tempId;
-            fieldId = tempId;
-        }
-
-        let labelText = '';
-
-        // --- Prioritize table headers (<th>) for fields inside table cells (<td>) ---
-        let currentCell = element.closest('td');
-        if (currentCell) {
-            const table = currentCell.closest('table');
-            if (table) {
-                const cellIndex = Array.from(currentCell.parentElement.children).indexOf(currentCell);
-                // Try to find a corresponding <th> in the same column within the table's thead
-                const headerCell = table.querySelector(`thead tr th:nth-child(${cellIndex + 1})`);
-                if (headerCell && headerCell.textContent.trim().length > 0) {
-                    labelText = headerCell.textContent.trim();
-                }
-            }
-        }
-
-        // Prioritize more direct and semantic labels if table header not found or empty
-        if (!labelText) {
-            if (element.getAttribute('aria-label')) {
-                labelText = element.getAttribute('aria-label').trim();
-            } else if (element.placeholder) {
-                labelText = element.placeholder.trim();
-            } else if (element.title) {
-                labelText = element.title.trim();
-            } else if (element.name) {
-                // Clean up name attribute if it contains array-like indexing
-                labelText = element.name.replace(/\[\d+\]/g, '').trim();
-            }
-        }
-
-        // Fallback to finding an associated label using 'for' attribute
-        if (!labelText && element.id) {
-            const label = document.querySelector(`label[for="${element.id}"]`);
-            if (label) {
-                labelText = label.textContent.trim();
-            }
-        }
-
-        // If no 'for' label, check parent elements for label text or aria-label
-        if (!labelText) {
-            let parent = element.parentElement;
-            while (parent && parent.tagName !== 'BODY') {
-                // Check for a <label> element that contains the current element
-                const potentialLabel = parent.querySelector(`label:has(#${element.id})`);
-                if (potentialLabel) {
-                    labelText = potentialLabel.textContent.trim();
-                    break;
-                }
-                // Check for a label or text directly within the parent that might serve as a label
-                const parentText = Array.from(parent.childNodes)
-                    .filter(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim().length > 0)
-                    .map(node => node.textContent.trim())
-                    .join(' ');
-                if (parentText) {
-                    labelText = parentText;
-                    break;
-                }
-                parent = parent.parentElement;
-            }
+            el.id = tempId; // Assign the generated ID to the element for easier future lookup
+            stableId = tempId;
         }
         
-        // --- Collect more metadata for intelligent auto-mapping and grouping context ---
-        let surroundingText = '';
+        // Add a data attribute for easier direct selection in the content script
+        el.setAttribute("data-auto-click-id", stableId);
 
-        // Prioritize text from immediate previous sibling elements that might be headings or prominent labels
-        let prevSibling = element.previousElementSibling;
-        while (prevSibling && (prevSibling.tagName === 'LABEL' || prevSibling.tagName === 'P' || prevSibling.tagName === 'DIV' || prevSibling.tagName.match(/^H[1-6]$/))) {
-            const text = prevSibling.textContent.trim();
-            if (text.length > 0) {
-                surroundingText = text + ' ' + surroundingText;
-            }
-            // Stop if we hit a non-text/label/heading element or a form boundary
-            if (!prevSibling.previousElementSibling || prevSibling.previousElementSibling.tagName === 'FORM') {
-                break;
-            }
-            prevSibling = prevSibling.previousElementSibling;
-        }
-
-        // Also check parent elements for prominent text/labels, especially for table headers (re-check if not already found)
-        if (!surroundingText && currentCell) { // Only if we are in a table cell and surroundingText is still empty
-            const table = currentCell.closest('table');
-            if (table) {
-                const cellIndex = Array.from(currentCell.parentElement.children).indexOf(currentCell);
-                const headerCell = table.querySelector(`thead tr th:nth-child(${cellIndex + 1})`);
-                if (headerCell && headerCell.textContent.trim().length > 0) {
-                    surroundingText = headerCell.textContent.trim();
-                }
-            }
-        }
-
-        // Check for general parent text/labels if still no strong context
-        let currentParent = element.parentElement;
-        while (currentParent && currentParent.tagName !== 'BODY') {
-            const parentLabel = currentParent.querySelector('label');
-            if (parentLabel && parentLabel.textContent.trim().length > 0 && !surroundingText.includes(parentLabel.textContent.trim())) {
-                surroundingText = parentLabel.textContent.trim() + ' ' + surroundingText;
-            }
-
-            const parentHeading = currentParent.querySelector('h1, h2, h3, h4, h5, h6');
-            if (parentHeading && parentHeading.textContent.trim().length > 0 && !surroundingText.includes(parentHeading.textContent.trim())) {
-                surroundingText = parentHeading.textContent.trim() + ' ' + surroundingText;
-            }
-
-            Array.from(currentParent.childNodes).forEach(node => {
-                if (node.nodeType === Node.TEXT_NODE && node.textContent.trim().length > 0 && !surroundingText.includes(node.textContent.trim())) {
-                    surroundingText += node.textContent.trim() + ' ';
-                }
-            });
-
-            currentParent = currentParent.parentElement;
-        }
-        surroundingText = surroundingText.trim();
-
-        // Fallback to labelText if surroundingText is still empty
-        if (!surroundingText && labelText) {
-            surroundingText = labelText;
-        }
-        // Fallback to placeholder if still no context
-        if (!surroundingText && element.placeholder) {
-            surroundingText = element.placeholder.trim();
-        }
-        // Fallback to name if still no context
-        if (!surroundingText && element.name) {
-            surroundingText = element.name.trim();
-        }
-
-        fields.push({
-            id: fieldId, // Internal unique ID for the element (now more stable)
-            name: element.name || '',
-            type: element.type || element.tagName.toLowerCase(),
-            value: element.value || '', // Current value of the field
-            labelText: labelText, // Best guess for a user-friendly label
-            htmlId: element.id, // Explicitly store the ID
-            placeholder: element.placeholder || '',
-            ariaLabel: element.getAttribute('aria-label') || '',
-            className: element.className || '', // All classes as a string
-            dataset: element.dataset ? JSON.parse(JSON.stringify(element.dataset)) : {}, // Convert DOMStringMap to plain object
-            surroundingText: surroundingText, // This will now be our primary grouping key
-            autocomplete: element.getAttribute('autocomplete') || '', // HTML autocomplete attribute
-            role: element.getAttribute('role') || '', // ARIA role attribute
-            title: element.getAttribute('title') || '' // HTML title attribute
-        });
+        return { text: label, stableId: stableId }; // Return the chosen label and stable ID
     });
-    return fields;
 }
 
 /**
- * Fills a batch of specified form fields with data.
- * @param {Array<Object>} dataBatch - An array of objects, where each object is { fieldId: valueToFill }.
- * @param {boolean} fillEmptyOnly - If true, only fill fields that are currently empty.
- * @returns {Object} An object with status, filled count, and skipped count.
+ * NEW: Performs a click on an element identified by its stable ID, with a delay between clicks.
+ * @param {string} stableId - The stable ID of the element to click.
+ * @param {number} count - The number of times to click the element.
+ * @returns {Object} An object indicating success or failure and a message.
  */
-function fillFormFieldsBatch(dataBatch, fillEmptyOnly) {
-    let filledCount = 0;
-    let skippedCount = 0;
+async function clickElementByStableId(stableId, count) {
+    // Select using the data-auto-click-id attribute
+    const target = document.querySelector(`[data-auto-click-id="${stableId}"]`);
+    
+    if (!target) {
+        return { success: false, message: "Target element not found on the page." };
+    }
 
-    dataBatch.forEach(fieldData => {
-        const fieldId = fieldData.id; // Use 'id' as the key for the field element
-        const valueToFill = fieldData.value; // Use 'value' as the value to fill
-
-        const element = document.getElementById(fieldId);
-
-        if (element) {
-            const currentFieldValue = element.value;
-
-            // Check if the field should be skipped based on fillEmptyOnly flag
-            if (fillEmptyOnly && currentFieldValue.trim() !== '') {
-                skippedCount++;
-                return; // Continue to the next item in the batch
-            }
-
-            // Fill the field based on its type
-            if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
-                element.value = valueToFill;
-                // Dispatch input/change events to trigger any framework listeners
-                element.dispatchEvent(new Event('input', { bubbles: true }));
-                element.dispatchEvent(new Event('change', { bubbles: true }));
-                filledCount++;
-            } else if (element.tagName === 'SELECT') {
-                // For select elements, try to find an option with the matching value
-                let optionFound = false;
-                for (let i = 0; i < element.options.length; i++) {
-                    // Match by value or by text content
-                    if (element.options[i].value === valueToFill || element.options[i].textContent === valueToFill) {
-                        element.value = element.options[i].value;
-                        optionFound = true;
-                        break;
-                    }
-                }
-                if (optionFound) {
-                    element.dispatchEvent(new Event('change', { bubbles: true }));
-                    filledCount++;
-                } else {
-                    console.warn(`Select element with ID "${fieldId}" has no option for value "${valueToFill}".`);
-                    skippedCount++; // Consider this skipped if value not found
-                }
-            } else {
-                console.warn(`Unsupported field type for element with ID "${fieldId}".`);
-                skippedCount++;
-            }
-        } else {
-            console.warn(`Element with ID "${fieldId}" not found on the page.`);
-            skippedCount++;
+    try {
+        for (let i = 0; i < count; i++) {
+            target.click(); // Perform the click event
+            await new Promise(resolve => setTimeout(resolve, 300)); // 300ms delay between clicks
         }
-    });
-
-    return { status: 'success', filledCount: filledCount, skippedCount: skippedCount };
+        return { success: true };
+    } catch (error) {
+        console.error("Error simulating click:", error);
+        return { success: false, message: `Error during click simulation: ${error.message}` };
+    }
 }
 
 
@@ -1683,6 +470,894 @@ function fillFormFieldsBatch(dataBatch, fillEmptyOnly) {
 
 --- END FILE: manifest.json ---
 
+--- START FILE: popup.css ---
+
+/* popup.css */
+
+/* Define CSS Variables for theming */
+:root {
+  --bg-color-light: #f9fafb; /* gray-50 */
+  --bg-color-dark: #1f2937; /* gray-800 */
+  
+  --text-color-light: #1f2937; /* Dark gray */
+  --text-color-dark: #e5e7eb; /* Light gray */
+
+  --header-text-color-light: #111827; /* Darker gray */
+  --header-text-color-dark: #f8fafc; /* White */
+
+  --card-bg-light: #ffffff; /* White */
+  --card-bg-dark: #2d3748; /* Darker card */
+
+  --border-color-light: #e5e7eb; /* Light border */
+  --border-color-dark: #4a5568; /* Dark border */
+
+  /* Primary Action Button (Blue) */
+  --primary-button-bg-light: #2563eb; /* blue-600 */
+  --primary-button-hover-bg-light: #1d4ed8; /* blue-700 */
+  --primary-button-shadow-light: rgba(37, 99, 235, 0.5); /* blue-600 with opacity */
+  --primary-button-bg-dark: #4f46e5; /* indigo-600 */
+  --primary-button-hover-bg-dark: #4338ca; /* indigo-700 */
+  --primary-button-shadow-dark: rgba(79, 70, 229, 0.5); /* indigo-600 with opacity */
+
+  /* Secondary Action Button (Emerald for Scan, general secondary) */
+  --secondary-button-bg-light: #6b7280; /* gray-500 for general secondary */
+  --secondary-button-hover-bg-light: #4b5563; /* gray-600 */
+  --secondary-button-bg-dark: #4a5568; /* gray-700 for general secondary */
+  --secondary-button-hover-bg-dark: #616e80; /* gray-600 */
+  
+  --emerald-button-bg-light: #059669; /* emerald-600 */
+  --emerald-button-hover-bg-light: #047857; /* emerald-700 */
+  --emerald-button-shadow-light: rgba(5, 150, 105, 0.5); /* emerald-600 with opacity */
+  --emerald-button-bg-dark: #065f46; /* emerald-800 */
+  --emerald-button-hover-bg-dark: #047857; /* emerald-700 */
+  --emerald-button-shadow-dark: rgba(6, 95, 70, 0.5); /* emerald-800 with opacity */
+
+
+  --input-border-light: #d1d5db; /* gray-300 */
+  --input-border-dark: #4a5568; /* gray-700 */
+  --input-focus-ring-light: #60a5fa; /* blue-400 */
+  --input-focus-ring-dark: #818cf8; /* indigo-400 */
+  --input-focus-ring-rgb-values-light: 96, 165, 250;
+  --input-focus-ring-rgb-values-dark: 129, 140, 248;
+
+  /* Drop Area */
+  --drop-area-border-light: #60a5fa; /* blue-400 */
+  --drop-area-bg-light: #eff6ff; /* blue-50 */
+  --drop-area-hover-bg-light: #dbeafe; /* blue-100 */
+  --drop-area-text-light: #6b7280; /* gray-500 */
+  --drop-area-hover-text-light: #1e40af; /* blue-800 */
+  
+  --drop-area-border-dark: #6366f1; /* indigo-500 */
+  --drop-area-bg-dark: #3730a3; /* indigo-900 */
+  --drop-area-hover-bg-dark: #4f46e5; /* indigo-700 */
+  --drop-area-text-dark: #a0aec0; /* gray-400 */
+  --drop-area-hover-text-dark: #e0e7ff; /* indigo-100 */
+
+  /* File Status Message */
+  --file-status-success-bg-light: #d1fae5; /* green-100 */
+  --file-status-success-border-light: #34d399; /* green-400 */
+  --file-status-success-text-light: #065f46; /* green-700 */
+  --file-status-success-icon-light: #10b981; /* green-500 */
+
+  --file-status-error-bg-light: #fee2e2; /* red-100 */
+  --file-status-error-border-light: #f87171; /* red-400 */
+  --file-status-error-text-light: #991b1b; /* red-700 */
+  --file-status-error-icon-light: #ef4444; /* red-500 */
+
+  --file-status-info-bg-light: #e0f2fe; /* blue-100 */
+  --file-status-info-border-light: #60a5fa; /* blue-400 */
+  --file-status-info-text-light: #1e40af; /* blue-700 */
+  --file-status-info-icon-light: #3b82f6; /* blue-500 */
+
+  --file-status-success-bg-dark: #065f46; /* green-900 */
+  --file-status-success-border-dark: #34d399; /* green-400 */
+  --file-status-success-text-dark: #d1fae5; /* green-100 */
+  --file-status-success-icon-dark: #10b981; /* green-500 */
+
+  --file-status-error-bg-dark: #7f1d1d; /* red-900 */
+  --file-status-error-border-dark: #f87171; /* red-400 */
+  --file-status-error-text-dark: #fee2e2; /* red-100 */
+  --file-status-error-icon-dark: #ef4444; /* red-500 */
+
+  --file-status-info-bg-dark: #1e3a8a; /* blue-900 */
+  --file-status-info-border-dark: #60a5fa; /* blue-400 */
+  --file-status-info-text-dark: #e0f2fe; /* blue-100 */
+  --file-status-info-icon-dark: #3b82f6; /* blue-500 */
+
+  /* Headers List */
+  --header-badge-bg-light: #e0e7ff; /* indigo-100 */
+  --header-badge-text-light: #3730a3; /* indigo-800 */
+  --header-badge-hover-bg-light: #c7d2fe; /* indigo-200 */
+  
+  --header-badge-bg-dark: #4338ca; /* indigo-700 */
+  --header-badge-text-dark: #e0e7ff; /* indigo-100 */
+  --header-badge-hover-bg-dark: #4f46e5; /* indigo-600 */
+
+
+  --auto-mapped-learned-bg: #bfdbfe; /* blue-200 */
+  --auto-mapped-learned-text: #1e40af; /* blue-800 */
+  --auto-mapped-fuzzy-bg: #d1fae5; /* green-200 */
+  --auto-mapped-fuzzy-text: #065f46; /* green-800 */
+  --auto-mapped-unmapped-bg: #e5e7eb; /* gray-200 */
+  --auto-mapped-unmapped-text: #4b5563; /* gray-800 */
+
+  --tab-button-bg: #e5e7eb; /* gray-200 */
+  --tab-button-hover-bg: #d1d5db; /* gray-300 */
+  --tab-button-active-bg: #ffffff;
+  --tab-button-active-text: #2563eb; /* blue-600 */
+  --tab-button-text: #4b5563; /* gray-700 */
+
+  --tab-button-bg-dark: #2d3748; /* gray-800 */
+  --tab-button-hover-bg-dark: #4a5568; /* gray-700 */
+  --tab-button-active-bg-dark: #6366f1; /* indigo-500 */
+  --tab-button-active-text-dark: #ffffff;
+  --tab-button-text-dark: #e2e8f0; /* gray-200 */
+  
+  --clickable-container-bg: #f9fafb; /* gray-50 */
+  --clickable-item-border: #e5e7eb; /* gray-200 */
+  --clickable-item-hover-bg: #f3f4f6; /* gray-100 */
+  --selected-button-highlight-bg: #e0f2fe; /* blue-100 */
+  --selected-button-highlight-border: #93c5fd; /* blue-300 */
+
+  --clickable-container-bg-dark: #2d3748; /* gray-800 */
+  --clickable-item-border-dark: #4a5568; /* gray-700 */
+  --clickable-item-hover-bg-dark: #4a5568; /* gray-700 */
+  --selected-button-highlight-bg-dark: #4f46e5; /* indigo-600 */
+  --selected-button-highlight-border-dark: #a5b4fc; /* indigo-300 */
+}
+
+/* Light Mode Defaults */
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-color-light);
+    color: var(--text-color-light);
+    transition: background-color 0.3s ease, color 0.3s ease;
+    box-sizing: border-box;
+    min-width: 320px; /* Ensure a minimum width for small screens */
+}
+
+.main-container {
+    padding: 1.5rem; /* More generous padding for the main card */
+    background-color: var(--card-bg-light);
+    border-radius: 0.75rem; /* Rounded corners */
+    box-shadow: 0 6px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* More prominent shadow */
+    position: relative; /* For theme switch positioning */
+    transition: background-color 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.section-heading {
+    color: var(--header-text-color-light);
+    border-color: var(--border-color-light);
+}
+
+.card {
+    background-color: var(--card-bg-light);
+    padding: 1.25rem; /* More generous padding */
+    border: 1px solid var(--border-color-light);
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08); /* Stronger shadow for cards */
+    margin-bottom: 1.5rem; /* More space between cards */
+    transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card-heading {
+    color: var(--header-text-color-light);
+}
+
+/* Action Buttons */
+.action-button {
+    display: flex; /* Make it a flex container for centering content */
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.75rem; /* Adjusted padding */
+    border-radius: 9999px; /* Fully rounded pill shape */
+    font-weight: 600;
+    transition: background-color 0.3s ease, transform 0.1s ease, box-shadow 0.3s ease;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1.5rem; /* Ensure text sits nicely */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* Subtle shadow */
+    outline: none; /* Remove default focus outline */
+}
+.action-button:hover {
+    transform: translateY(-1px); /* Slight lift effect */
+    box-shadow: 0 6px 10px -2px rgba(0, 0, 0, 0.15), 0 3px 6px -2px rgba(0, 0, 0, 0.08);
+}
+.action-button:active {
+    transform: translateY(0); /* Press down effect */
+    box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
+}
+.action-button:focus-visible {
+    /* Custom focus ring for accessibility */
+    box-shadow: 0 0 0 4px var(--focus-ring-color-rgb), 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Specific button colors */
+.action-button.primary {
+    background-color: var(--primary-button-bg-light);
+    color: #fff;
+    --focus-ring-color-rgb: var(--primary-button-shadow-light);
+}
+.action-button.primary:hover {
+    background-color: var(--primary-button-hover-bg-light);
+}
+
+.action-button.emerald {
+    background-color: var(--emerald-button-bg-light);
+    color: #fff;
+    --focus-ring-color-rgb: var(--emerald-button-shadow-light);
+}
+.action-button.emerald:hover {
+    background-color: var(--emerald-button-hover-bg-light);
+}
+
+.action-button.secondary {
+    background-color: var(--secondary-button-bg-light);
+    color: #fff; /* White text for better contrast on gray */
+    box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05); /* Lighter shadow for secondary */
+    --focus-ring-color-rgb: rgba(107, 114, 128, 0.5); /* gray-500 with opacity */
+}
+.action-button.secondary:hover {
+    background-color: var(--secondary-button-hover-bg-light);
+}
+
+/* Form Inputs */
+.form-input {
+    border: 1px solid var(--input-border-light);
+    border-radius: 0.5rem; /* Rounded corners for inputs */
+    padding: 0.625rem 1rem; /* Adjusted padding */
+    width: 100%;
+    background-color: var(--card-bg-light); /* Use card background for consistency */
+    color: var(--text-color-light);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    -webkit-appearance: none; /* Remove default browser styling */
+    -moz-appearance: none;
+    appearance: none;
+}
+.form-input:focus {
+    border-color: var(--input-focus-ring-light);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(var(--input-focus-ring-rgb-values-light), 0.3); /* Custom focus ring */
+}
+
+/* File Drop Area */
+.drop-area {
+    border: 2px dashed var(--drop-area-border-light);
+    border-radius: 0.75rem;
+    padding: 2rem; /* More padding */
+    text-align: center;
+    background-color: var(--drop-area-bg-light);
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 10rem;
+}
+.drop-area:hover {
+    background-color: var(--drop-area-hover-bg-light);
+    border-color: var(--primary-button-bg-light); /* Highlight border on hover */
+}
+.drop-area p {
+    color: var(--drop-area-text-light);
+    margin-bottom: 1rem;
+    font-size: 1.125rem; /* Larger text */
+    font-weight: 500;
+}
+.drop-area:hover p {
+    color: var(--drop-area-hover-text-light);
+}
+.browse-button {
+    display: inline-block;
+    background-color: var(--primary-button-bg-light);
+    color: #fff;
+    padding: 0.85rem 2rem; /* Adjusted padding for prominence */
+    border-radius: 9999px;
+    font-size: 1.125rem; /* Larger font */
+    font-weight: 600;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+}
+.browse-button:hover {
+    background-color: var(--primary-button-hover-bg-light);
+    box-shadow: 0 6px 10px -2px rgba(0, 0, 0, 0.15), 0 3px 6px -2px rgba(0, 0, 0, 0.08);
+}
+
+/* File Status Message */
+.file-status {
+    padding: 0.875rem 1.25rem; /* Adjusted padding */
+    border-radius: 0.625rem; /* More rounded */
+    font-size: 0.95rem; /* Slightly larger font */
+    font-weight: 500;
+    line-height: 1.4;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    /* Specific colors set by JS based on type */
+}
+
+.file-status.message-success {
+    background-color: var(--file-status-success-bg-light);
+    border: 1px solid var(--file-status-success-border-light);
+    color: var(--file-status-success-text-light);
+}
+.file-status.message-success #fileStatusIcon {
+    color: var(--file-status-success-icon-light);
+}
+
+.file-status.message-error {
+    background-color: var(--file-status-error-bg-light);
+    border: 1px solid var(--file-status-error-border-light);
+    color: var(--file-status-error-text-light);
+}
+.file-status.message-error #fileStatusIcon {
+    color: var(--file-status-error-icon-light);
+}
+
+.file-status.message-info {
+    background-color: var(--file-status-info-bg-light);
+    border: 1px solid var(--file-status-info-border-light);
+    color: var(--file-status-info-text-light);
+}
+.file-status.message-info #fileStatusIcon {
+    color: var(--file-status-info-icon-light);
+}
+
+
+/* Headers List */
+.headers-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem; /* Space between headers */
+    margin-bottom: 2rem;
+}
+.headers-list span {
+    background-color: var(--header-badge-bg-light);
+    color: var(--header-badge-text-light);
+    padding: 0.6rem 1.25rem; /* More padding */
+    border-radius: 9999px; /* Fully rounded */
+    font-size: 0.95rem;
+    font-weight: 500;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05); /* Subtle shadow */
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    display: flex;
+    align-items: center;
+    cursor: default;
+}
+.headers-list span:hover {
+    background-color: var(--header-badge-hover-bg-light);
+}
+
+/* Checkbox/Radio Labels (Updated) */
+.checkbox-label, .radio-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    color: var(--text-color-light);
+}
+.checkbox-label input[type="checkbox"], .radio-label input[type="radio"] {
+    height: 1.125rem; /* Slightly larger */
+    width: 1.125rem; /* Slightly larger */
+    border: 1px solid var(--input-border-light);
+    border-radius: 0.25rem; /* Rounded corners for checkboxes */
+    background-color: var(--card-bg-light);
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    flex-shrink: 0;
+    margin-right: 0.5rem;
+}
+.checkbox-label input[type="checkbox"]:checked, .radio-label input[type="radio"]:checked {
+    background-color: var(--primary-button-bg-light); /* Use primary color */
+    border-color: var(--primary-button-bg-light);
+    position: relative;
+}
+.checkbox-label input[type="checkbox"]:checked::after {
+    content: '\2713'; /* Checkmark unicode character */
+    font-size: 0.75rem;
+    color: white;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+.radio-label input[type="radio"] {
+    border-radius: 50%; /* Make radio buttons round */
+}
+.radio-label input[type="radio"]:checked::after {
+    content: '';
+    width: 0.5rem;
+    height: 0.5rem;
+    background-color: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+.checkbox-label input[type="checkbox"]:focus, .radio-label input[type="radio"]:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(var(--input-focus-ring-rgb-values-light), 0.3);
+}
+
+/* Message Boxes (general ones, not file-status) */
+.message-box {
+    padding: 0.875rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    line-height: 1.4;
+    display: flex;
+    align-items: center;
+    margin-top: 1rem;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+.message-box i {
+    margin-right: 0.75rem;
+    font-size: 1.1rem;
+}
+
+.message-success {
+    background-color: #d1fae5; /* green-100 */
+    border-left: 4px solid #10b981; /* green-600 */
+    color: #065f46; /* green-900 */
+}
+.message-error {
+    background-color: #fee2e2; /* red-100 */
+    border-left: 4px solid #dc2626; /* red-600 */
+    color: #7f1d1d; /* red-900 */
+}
+.message-info {
+    background-color: #e0f2fe; /* blue-100 */
+    border-left: 4px solid #0284c7; /* light-blue-700 */
+    color: #1e3a8a; /* blue-900 */
+}
+
+/* Loading Spinner */
+.loading-spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-left-color: var(--primary-button-bg-light);
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 0.5rem;
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Badges for Auto-Mapped Fields */
+.auto-mapped-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    margin-left: 0.75rem;
+    white-space: nowrap;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+.auto-mapped-badge.learned {
+    background-color: var(--auto-mapped-learned-bg);
+    color: var(--auto-mapped-learned-text);
+}
+.auto-mapped-badge.fuzzy {
+    background-color: var(--auto-mapped-fuzzy-bg);
+    color: var(--auto-mapped-fuzzy-text);
+}
+.auto-mapped-badge.unmapped {
+    background-color: var(--auto-mapped-unmapped-bg);
+    color: var(--auto-mapped-unmapped-text);
+}
+
+/* Tab Styling */
+.tab-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    padding: 0.375rem;
+    background-color: var(--tab-button-bg);
+    border-radius: 0.75rem;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: background-color 0.3s ease;
+}
+.tab-button {
+    flex-grow: 1;
+    padding: 0.625rem 1rem;
+    border-radius: 0.625rem;
+    text-align: center;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+    background-color: transparent;
+    color: var(--tab-button-text);
+    border: none;
+}
+.tab-button:hover {
+    background-color: var(--tab-button-hover-bg);
+}
+.tab-button.active {
+    background-color: var(--tab-button-active-bg);
+    color: var(--tab-button-active-text);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.06);
+    font-weight: 600;
+}
+.tab-button i {
+    margin-right: 0.5rem;
+}
+.tab-content {
+    transition: opacity 0.3s ease-in-out;
+}
+.tab-content.hidden {
+    display: none;
+}
+
+/* Field Mapping Group Item (Added card styling) */
+.field-mapping-group-item {
+    padding: 1rem; /* Slightly less padding than main card */
+    margin-bottom: 1rem; /* Space between mapping groups */
+}
+.field-mapping-group-item .group-mapper {
+    border: 1px solid var(--input-border-light);
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background-color: var(--card-bg-light);
+    color: var(--text-color-light);
+}
+
+/* Specific styles for Auto Click section */
+#clickableButtonsContainer {
+    max-height: 15rem;
+    overflow-y: auto;
+    border: 1px solid var(--clickable-item-border);
+    border-radius: 0.5rem;
+    background-color: var(--clickable-container-bg);
+    padding: 0.5rem;
+    margin-bottom: 1.5rem;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+#clickableButtonsContainer > div {
+    display: flex;
+    align-items: center;
+    padding: 0.625rem;
+    border-bottom: 1px solid var(--clickable-item-border);
+    border-radius: 0.375rem;
+    margin-bottom: 0.25rem;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+#clickableButtonsContainer > div:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+#clickableButtonsContainer > div:hover {
+    background-color: var(--clickable-item-hover-bg);
+}
+#clickableButtonsContainer label {
+    margin-left: 0.5rem;
+    font-size: 0.95rem;
+    color: var(--text-color-light);
+    flex-grow: 1;
+}
+#clickableButtonsContainer input[type="radio"] {
+    margin-right: 0.5rem;
+    flex-shrink: 0;
+}
+#clickControlSection label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-color-light);
+    margin-bottom: 0.75rem;
+}
+.selected-button-highlight {
+    background-color: var(--selected-button-highlight-bg);
+    border-color: var(--selected-button-highlight-border);
+    font-weight: 600;
+}
+
+/* Theme Toggle Switch */
+.theme-switch {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 10;
+}
+.theme-switch input {
+  display: none;
+}
+.slider {
+  width: 44px;
+  height: 24px;
+  background: var(--border-color-light);
+  border-radius: 24px;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.3s ease;
+  display: block;
+}
+.slider::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: var(--text-color-light);
+  border-radius: 50%;
+  transition: transform 0.3s ease, background 0.3s ease;
+}
+input:checked + .slider {
+    background: var(--primary-button-bg-light);
+}
+input:checked + .slider::before {
+  transform: translateX(20px);
+  background: white;
+}
+
+/* Dark Mode Overrides */
+body.dark {
+    background-color: var(--bg-color-dark);
+    color: var(--text-color-dark);
+}
+
+.main-container.dark {
+    background-color: var(--card-bg-dark);
+    border-color: var(--border-color-dark);
+}
+
+.section-heading.dark {
+    color: var(--header-text-color-dark);
+    border-color: var(--border-color-dark);
+}
+
+.card.dark {
+    background-color: var(--card-bg-dark);
+    border-color: var(--border-color-dark);
+}
+
+.card-heading.dark {
+    color: var(--header-text-color-dark);
+}
+
+.action-button.primary.dark {
+    background-color: var(--primary-button-bg-dark);
+    --focus-ring-color-rgb: var(--primary-button-shadow-dark);
+}
+.action-button.primary.dark:hover {
+    background-color: var(--primary-button-hover-bg-dark);
+}
+
+.action-button.emerald.dark {
+    background-color: var(--emerald-button-bg-dark);
+    --focus-ring-color-rgb: var(--emerald-button-shadow-dark);
+}
+.action-button.emerald.dark:hover {
+    background-color: var(--emerald-button-hover-bg-dark);
+}
+
+.action-button.secondary.dark {
+    background-color: var(--secondary-button-bg-dark);
+    color: var(--text-color-dark); /* Light text on dark secondary */
+    --focus-ring-color-rgb: rgba(74, 85, 104, 0.5); /* gray-700 with opacity */
+}
+.action-button.secondary.dark:hover {
+    background-color: var(--secondary-button-hover-bg-dark);
+}
+
+.form-input.dark {
+    border-color: var(--input-border-dark);
+    background-color: var(--card-bg-dark);
+    color: var(--text-color-dark);
+}
+.form-input.dark:focus {
+    border-color: var(--input-focus-ring-dark);
+    box-shadow: 0 0 0 3px rgba(var(--input-focus-ring-rgb-values-dark), 0.3);
+}
+
+.drop-area.dark {
+    border-color: var(--drop-area-border-dark);
+    background-color: var(--drop-area-bg-dark);
+}
+.drop-area.dark:hover {
+    background-color: var(--drop-area-hover-bg-dark);
+    border-color: var(--primary-button-bg-dark);
+}
+.drop-area.dark p {
+    color: var(--drop-area-text-dark);
+}
+.drop-area.dark:hover p {
+    color: var(--drop-area-hover-text-dark);
+}
+.browse-button.dark {
+    background-color: var(--primary-button-bg-dark);
+}
+.browse-button.dark:hover {
+    background-color: var(--primary-button-hover-bg-dark);
+}
+
+.file-status.message-success.dark {
+  background-color: var(--file-status-success-bg-dark);
+  border-color: var(--file-status-success-border-dark);
+  color: var(--file-status-success-text-dark);
+}
+.file-status.message-success.dark #fileStatusIcon {
+    color: var(--file-status-success-icon-dark);
+}
+
+.file-status.message-error.dark {
+  background-color: var(--file-status-error-bg-dark);
+  border-color: var(--file-status-error-border-dark);
+  color: var(--file-status-error-text-dark);
+}
+.file-status.message-error.dark #fileStatusIcon {
+    color: var(--file-status-error-icon-dark);
+}
+
+.file-status.message-info.dark {
+  background-color: var(--file-status-info-bg-dark);
+  border-color: var(--file-status-info-border-dark);
+  color: var(--file-status-info-text-dark);
+}
+.file-status.message-info.dark #fileStatusIcon {
+    color: var(--file-status-info-icon-dark);
+}
+
+.headers-list.dark span {
+    background-color: var(--header-badge-bg-dark);
+    color: var(--header-badge-text-dark);
+}
+.headers-list.dark span:hover {
+    background-color: var(--header-badge-hover-bg-dark);
+}
+
+.checkbox-label.dark, .radio-label.dark {
+    color: var(--text-color-dark);
+}
+.checkbox-label.dark input[type="checkbox"], .radio-label.dark input[type="radio"] {
+    border-color: var(--input-border-dark);
+    background-color: var(--card-bg-dark);
+}
+.checkbox-label.dark input[type="checkbox"]:checked, .radio-label.dark input[type="radio"]:checked {
+    background-color: var(--primary-button-bg-dark);
+    border-color: var(--primary-button-bg-dark);
+}
+.checkbox-label.dark input[type="checkbox"]:focus, .radio-label.dark input[type="radio"]:focus {
+    box-shadow: 0 0 0 3px rgba(var(--input-focus-ring-rgb-values-dark), 0.3);
+}
+
+.message-success.dark {
+  background-color: #065f46; /* green-900 */
+  border-left-color: #10b981; /* green-600 */
+  color: #d1fae5; /* green-100 */
+}
+.message-error.dark {
+  background-color: #7f1d1d; /* red-900 */
+  border-left-color: #dc2626; /* red-600 */
+  color: #fee2e2; /* red-100 */
+}
+.message-info.dark {
+  background-color: #1e3a8a; /* blue-900 */
+  border-left-color: #0284c7; /* light-blue-700 */
+  color: #e0f2fe; /* blue-100 */
+}
+
+.auto-mapped-badge.learned.dark {
+  background-color: #4c51bf; /* indigo-700 */
+  color: #e0e7ff; /* indigo-100 */
+}
+.auto-mapped-badge.fuzzy.dark {
+  background-color: #14532d; /* green-900 */
+  color: #dcfce7; /* green-100 */
+}
+.auto-mapped-badge.unmapped.dark {
+  background-color: #4a5568; /* gray-700 */
+  color: #a0aec0; /* gray-400 */
+}
+
+.tab-buttons.dark {
+    background-color: var(--tab-button-bg-dark);
+}
+.tab-button.dark {
+    color: var(--tab-button-text-dark);
+}
+.tab-button.dark:hover {
+    background-color: var(--tab-button-hover-bg-dark);
+}
+.tab-button.active.dark {
+    background-color: var(--tab-button-active-bg-dark);
+    color: var(--tab-button-active-text-dark);
+}
+
+#clickableButtonsContainer.dark {
+    border-color: var(--clickable-item-border-dark);
+    background-color: var(--clickable-container-bg-dark);
+}
+#clickableButtonsContainer.dark > div {
+    border-color: var(--clickable-item-border-dark);
+}
+#clickableButtonsContainer.dark > div:hover {
+    background-color: var(--clickable-item-hover-bg-dark);
+}
+#clickableButtonsContainer.dark label {
+    color: var(--text-color-dark);
+}
+#clickControlSection.dark {
+    border-color: var(--clickable-item-border-dark);
+    background-color: var(--clickable-container-bg-dark);
+}
+#clickControlSection.dark label {
+    color: var(--text-color-dark);
+}
+.selected-button-highlight.dark {
+    background-color: var(--selected-button-highlight-bg-dark);
+    border-color: var(--selected-button-highlight-border-dark);
+}
+
+.theme-switch input:checked + .slider.dark {
+    background: var(--primary-button-bg-dark);
+}
+.theme-switch input:checked + .slider.dark::before {
+  background: white;
+}
+.slider.dark {
+    background: var(--border-color-dark);
+}
+.slider.dark::before {
+  background: var(--text-color-dark);
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .main-container {
+    padding: 1rem;
+  }
+  .section-heading, .card-heading {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+  }
+  .action-button {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+  }
+  .browse-button {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+  }
+  .drop-area {
+    padding: 1.5rem;
+    min-height: 8rem;
+  }
+  .drop-area p {
+    font-size: 1rem;
+  }
+  .file-status {
+    font-size: 0.85rem;
+    padding: 0.75rem 1rem;
+  }
+  .headers-list span {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+  .tab-button {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+  }
+  .theme-switch {
+    top: 0.75rem;
+    right: 0.75rem;
+  }
+}
+
+
+--- END FILE: popup.css ---
+
 --- START FILE: popup.html ---
 
 <!DOCTYPE html>
@@ -1697,131 +1372,140 @@ function fillFormFieldsBatch(dataBatch, fillEmptyOnly) {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Fuse.js CDN for fuzzy matching -->
     <script src="https://cdn.jsdelivr.net/npm/fuse.js/dist/fuse.min.js"></script>
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6; /* Light gray background */
-            width: 400px; /* Fixed width for the popup */
-            padding: 1rem;
-        }
-        .container {
-            padding: 1rem;
-            background-color: #ffffff;
-            border-radius: 0.75rem; /* Rounded corners */
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-        .btn-primary {
-            @apply bg-blue-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75;
-        }
-        .btn-secondary {
-            @apply bg-gray-300 text-gray-800 px-4 py-2 rounded-lg shadow-md hover:bg-gray-400 transition duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-75;
-        }
-        input[type="text"], select {
-            @apply border border-gray-300 rounded-md p-2 w-full focus:ring-2 focus:ring-blue-500 focus:border-transparent;
-        }
-        .file-input-label {
-            @apply block w-full text-center py-3 px-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:text-blue-600 transition duration-300 ease-in-out;
-        }
-        .file-input-label input[type="file"] {
-            display: none;
-        }
-        /* Styling for grouped field items */
-        .field-mapping-group-item {
-            @apply flex flex-col mb-4 p-4 bg-gray-50 rounded-lg shadow-sm;
-        }
-        .checkbox-label {
-            @apply flex items-center cursor-pointer;
-        }
-        .checkbox-label input[type="checkbox"] {
-            @apply h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500;
-        }
-        .message-box {
-            @apply p-3 rounded-md text-sm;
-        }
-        .message-success {
-            @apply bg-green-100 text-green-800;
-        }
-        .message-error {
-            @apply bg-red-100 text-red-800;
-        }
-        .message-info {
-            @apply bg-blue-100 text-blue-800;
-        }
-        .loading-spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            border-left-color: #2563eb;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
-            display: inline-block;
-            vertical-align: middle;
-            margin-left: 0.5rem;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        /* NEW: Styling for auto-matched badge */
-        .auto-matched-badge {
-            @apply inline-block bg-green-200 text-green-800 text-xs font-medium px-2 py-0.5 rounded-full ml-2;
-        }
-    </style>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Custom Stylesheet -->
+    <link rel="stylesheet" href="popup.css">
 </head>
-<body class="antialiased">
-    <div class="container">
-        <h1 class="text-xl font-bold text-center text-gray-800 mb-4">Spreadsheet Data Filler</h1>
+<body class="bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center min-h-screen p-4 transition-colors duration-300 antialiased">
+    <div class="main-container bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 md:p-8 max-w-lg w-full border border-gray-200 dark:border-gray-700 relative transition-colors duration-300">
+        <h1 class="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 text-center mb-6 pb-2 border-b border-gray-200 dark:border-gray-700">Extension Features</h1>
 
-        <!-- Step 1: Upload File -->
-        <section class="mb-6 p-4 border border-gray-200 rounded-lg">
-            <h2 class="text-lg font-semibold text-gray-700 mb-3">1. Upload File</h2>
-            <p class="text-gray-600 text-sm mb-3">Supported: .XLS, .XLSX, .ODS, .CSV, .XLSM, .XLSB.</p>
-            <label for="fileInput" class="file-input-label">
-                <span id="fileNameDisplay" class="text-gray-500">Click or drag file here</span>
-                <input type="file" id="fileInput" accept=".xls,.xlsx,.ods,.csv,.xlsm,.xlsb" />
-            </label>
-            <div id="fileUploadMessage" class="message-box mt-3 hidden"></div>
-        </section>
+        <!-- Dark Mode Toggle -->
+        <label class="theme-switch absolute top-4 right-4 md:top-6 md:right-6">
+          <input type="checkbox" id="themeToggle">
+          <span class="slider"></span>
+        </label>
 
-        <!-- Step 2: Display Headers and Scan Form -->
-        <section id="dataDisplaySection" class="mb-6 p-4 border border-gray-200 rounded-lg hidden">
-            <h2 class="text-lg font-semibold text-gray-700 mb-3">2. Map Fields</h2>
+        <!-- Tab Buttons -->
+        <div class="tab-buttons">
+            <button id="autoFillTab" class="tab-button active">
+                <i class="fas fa-file-excel mr-2"></i>Auto Fill
+            </button>
+            <button id="autoClickTab" class="tab-button">
+                <i class="fas fa-mouse-pointer mr-2"></i>Auto Click
+            </button>
+        </div>
 
-            <div class="mb-4">
-                <h3 class="text-md font-medium text-gray-700 mb-2">File Headers:</h3>
-                <div id="headersDisplay" class="bg-gray-100 p-3 rounded-md text-gray-700 text-xs overflow-x-auto">
-                    <!-- Headers will be displayed here -->
-                </div>
-            </div>
-
-            <button id="scanFieldsButton" class="btn-secondary w-full mb-4">Scan Current Tab for Fields</button>
-            <div id="scanMessage" class="message-box mt-3 hidden"></div>
-
-            <!-- Field Mapping Section -->
-            <div id="fieldMappingSection" class="mt-4 hidden">
-                <h3 class="text-md font-medium text-gray-700 mb-2">Available Form Field Groups:</h3>
-                <div id="mappingContainer">
-                    <!-- Mapping dropdowns will be inserted here dynamically -->
-                </div>
-                <div class="flex items-center mt-4">
-                    <label class="checkbox-label mr-3 text-sm">
-                        <input type="checkbox" id="fillEmptyOnlyCheckbox" class="mr-2">
-                        Fill only empty fields
+        <!-- Auto Fill Section -->
+        <section id="autoFillSection" class="tab-content">
+            <h2 class="section-heading text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700"><i class="fas fa-magic mr-2 text-blue-500"></i>Auto Fill Data</h2>
+            
+            <!-- Step 1: Upload File -->
+            <div class="card mb-6">
+                <h3 class="card-heading text-md md:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3"><i class="fas fa-upload mr-2 text-blue-500"></i>1. Upload File</h3>
+                <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">Supported: <span class="font-medium text-gray-700 dark:text-gray-300">.XLS, .XLSX, .ODS, .CSV, .XLSM, .XLSB.</span></p>
+                
+                <div class="drop-area" id="drop-area">
+                    <input type="file" id="fileInput" class="hidden" accept=".xls,.xlsx,.ods,.csv,.xlsm,.xlsb" />
+                    <p id="fileNameDisplay" class="text-gray-500 dark:text-gray-400 mb-4 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition duration-300 ease-in-out">
+                        Drag & Drop your file here, or
+                    </p>
+                    <label for="fileInput" class="browse-button">
+                        Browse File
                     </label>
                 </div>
-
-                <!-- NEW: Test Fill / Preview Buttons -->
-                <div class="flex flex-col space-y-2 mt-4">
-                    <button id="testFillButton" class="btn-secondary w-full">Test Fill First Row</button>
-                    <button id="previewValuesButton" class="btn-secondary w-full">Preview Mapped Values</button>
+                
+                <div id="fileStatusMessage" class="file-status mt-4 hidden">
+                    <i id="fileStatusIcon" class="text-xl mr-3"></i>
+                    <span id="fileMessage" class="text-lg font-medium"></span>
                 </div>
-                <div id="testFillMessage" class="message-box mt-3 hidden"></div>
-                <div id="previewValuesMessage" class="message-box mt-3 hidden"></div>
             </div>
 
-            <button id="fillDataButton" class="btn-primary w-full mt-6">Fill Data</button>
-            <!-- One-Click Autofill Button -->
-            <button id="oneClickAutofillButton" class="btn-primary w-full mt-2 hidden">One-Click Autofill (Auto-Map & Fill)</button>
-            <div id="fillDataMessage" class="message-box mt-3 hidden"></div>
+            <!-- Step 2: Display Headers and Scan Form -->
+            <div id="dataDisplaySection" class="card hidden">
+                <h3 class="card-heading text-md md:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3"><i class="fas fa-map-marker-alt mr-2 text-blue-500"></i>2. Map Fields</h3>
+
+                <div class="mb-4">
+                    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">File Headers:</h4>
+                    <div id="headersDisplay" class="headers-list">
+                        <!-- Headers will be displayed here dynamically -->
+                    </div>
+                </div>
+
+                <button id="scanFieldsButton" class="action-button emerald w-full mb-4">
+                    <i class="fas fa-sync-alt mr-2"></i>Scan Current Tab for Fields
+                </button>
+                <div id="scanMessage" class="message-box mt-3 hidden"></div>
+
+                <!-- Field Mapping Section -->
+                <div id="fieldMappingSection" class="mt-4 hidden">
+                    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Available Form Field Groups:</h4>
+                    <div id="mappingContainer">
+                        <!-- Mapping dropdowns will be inserted here dynamically -->
+                    </div>
+                    <div class="flex items-center mt-4">
+                        <label class="checkbox-label mr-3 text-sm">
+                            <input type="checkbox" id="fillEmptyOnlyCheckbox" class="mr-2">
+                            Fill only empty fields
+                        </label>
+                    </div>
+
+                    <!-- Test Fill / Preview Buttons -->
+                    <div class="flex flex-col space-y-2 mt-4">
+                        <button id="testFillButton" class="action-button secondary w-full">
+                            <i class="fas fa-vial mr-2"></i>Test Fill First Row
+                        </button>
+                        <div id="testFillMessage" class="message-box mt-3 hidden"></div>
+                        <button id="previewValuesButton" class="action-button secondary w-full">
+                            <i class="fas fa-eye mr-2"></i>Preview Mapped Values
+                        </button>
+                        <div id="previewValuesMessage" class="message-box mt-3 hidden"></div>
+                    </div>
+                </div>
+
+                <button id="fillDataButton" class="action-button primary w-full mt-6">
+                    <i class="fas fa-paper-plane mr-2"></i>Fill Data
+                </button>
+                <button id="oneClickAutofillButton" class="action-button primary w-full mt-2 hidden text-sm py-1.5 px-2">
+                    <i class="fas fa-magic mr-1 text-sm"></i>One-Click Autofill (Auto-Map &amp; Fill)
+                </button>
+                <div id="fillDataMessage" class="message-box mt-3 hidden"></div>
+            </div>
+        </section>
+
+        <!-- Auto Click Section -->
+        <section id="autoClickSection" class="tab-content hidden">
+            <h2 class="section-heading text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700"><i class="fas fa-mouse-pointer mr-2 text-indigo-500"></i>Auto Click Buttons</h2>
+            <div id="autoClickMessage" class="message-box mb-4 hidden"></div>
+            
+            <!-- Step 1: Scan for Clickable Elements -->
+            <div class="card mb-6">
+                <h3 class="card-heading text-md md:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3"><i class="fas fa-search mr-2 text-indigo-500"></i>1. Scan for Clickable Elements</h3>
+                <p class="text-gray-600 dark:text-gray-400 text-sm mb-3">Find buttons and other clickable elements on the current page.</p>
+                <button id="scanButtons" class="action-button secondary w-full">
+                    <i class="fas fa-sync-alt mr-2"></i>Scan for Clickable Buttons
+                </button>
+            </div>
+            
+            <!-- Step 2: Select a Button -->
+            <div id="selectButtonCard" class="card hidden mb-6">
+                <h3 class="card-heading text-md md:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3"><i class="fas fa-hand-pointer mr-2 text-indigo-500"></i>2. Select a Button</h3>
+                <div id="clickableButtonsContainer" class="max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 p-2 mb-4">
+                    <!-- Clickable buttons will be listed here -->
+                    <p class="text-gray-500 dark:text-gray-400 text-sm p-2">No buttons found yet. Click 'Scan' above.</p>
+                </div>
+            </div>
+
+            <!-- Step 3: Choose Number of Clicks -->
+            <div id="clickControlSection" class="card hidden">
+                <h3 class="card-heading text-md md:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3"><i class="fas fa-play-circle mr-2 text-indigo-500"></i>3. Choose Number of Clicks & Execute</h3>
+                <label for="clickCount" class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Number of clicks:</label>
+                <input type="number" id="clickCount" value="1" min="1" class="mb-4 form-input" />
+                <button id="startClicking" class="action-button primary w-full">
+                    <i class="fas fa-bullseye mr-2"></i>Start Clicking
+                </button>
+            </div>
         </section>
     </div>
 
@@ -1832,10 +1516,10 @@ function fillFormFieldsBatch(dataBatch, fillEmptyOnly) {
         // Global error handler for better debugging
         window.onerror = function (msg, url, lineNo, columnNo, error) {
             console.error('Global Error (popup.html):', { msg, url, lineNo, columnNo, error });
-            const errorMessageElement = document.getElementById('fillDataMessage'); // Or a dedicated error box
+            const errorMessageElement = document.getElementById('fileStatusMessage') || document.getElementById('scanMessage') || document.getElementById('fillDataMessage') || document.getElementById('autoClickMessage');
             if (errorMessageElement) {
-                errorMessageElement.textContent = `An unexpected error occurred: ${msg}. Check console for details.`;
-                errorMessageElement.className = 'message-box mt-3 message-error';
+                errorMessageElement.innerHTML = `<i class="fas fa-exclamation-circle text-red-500 text-xl mr-3"></i><span class="text-lg font-medium">An unexpected error occurred: <strong>${msg}</strong>. Check console for details.</span>`;
+                errorMessageElement.className = 'file-status message-error';
                 errorMessageElement.classList.remove('hidden');
             }
         };
@@ -1856,10 +1540,19 @@ let availableFormFields = []; // Stores fields found on the active tab
 let groupedFormFields = {}; // Stores fields grouped by their 'surroundingText' or derived name
 let learnedMappings = {}; // Stores user's preferred mappings for schema learning
 
-// DOM Elements
+// DOM Elements - Tabs
+const autoFillTab = document.getElementById("autoFillTab");
+const autoClickTab = document.getElementById("autoClickTab");
+const autoFillSection = document.getElementById("autoFillSection");
+const autoClickSection = document.getElementById("autoClickSection");
+
+// DOM Elements - Auto Fill Section
 const fileInput = document.getElementById('fileInput');
-const fileNameDisplay = document.getElementById('fileNameDisplay');
-const fileUploadMessage = document.getElementById('fileUploadMessage');
+const dropArea = document.getElementById('drop-area'); // New: Reference to the drag and drop area
+const fileNameDisplay = document.getElementById('fileNameDisplay'); // Still used for "Drag & Drop..." text
+const fileStatusMessage = document.getElementById('fileStatusMessage'); // New: The combined status div
+const fileMessage = document.getElementById('fileMessage'); // New: Span inside status div for text
+const fileStatusIcon = document.getElementById('fileStatusIcon'); // New: Icon inside status div
 const dataDisplaySection = document.getElementById('dataDisplaySection');
 const headersDisplay = document.getElementById('headersDisplay');
 const scanFieldsButton = document.getElementById('scanFieldsButton');
@@ -1869,29 +1562,82 @@ const mappingContainer = document.getElementById('mappingContainer');
 const fillDataButton = document.getElementById('fillDataButton');
 const fillDataMessage = document.getElementById('fillDataMessage');
 const fillEmptyOnlyCheckbox = document.getElementById('fillEmptyOnlyCheckbox');
-const oneClickAutofillButton = document.getElementById('oneClickAutofillButton'); // Autofill button
-const testFillButton = document.getElementById('testFillButton'); // NEW: Test Fill button
-const previewValuesButton = document.getElementById('previewValuesButton'); // NEW: Preview button
-const testFillMessage = document.getElementById('testFillMessage'); // NEW: Test Fill message box
-const previewValuesMessage = document.getElementById('previewValuesMessage'); // NEW: Preview message box
+const oneClickAutofillButton = document.getElementById('oneClickAutofillButton');
+const testFillButton = document.getElementById('testFillButton');
+const previewValuesButton = document.getElementById('previewValuesButton');
+const testFillMessage = document.getElementById('testFillMessage');
+const previewValuesMessage = document.getElementById('previewValuesMessage');
+
+// DOM Elements - Auto Click Section
+const scanButtons = document.getElementById("scanButtons");
+const clickableButtonsContainer = document.getElementById("clickableButtonsContainer");
+const clickCountInput = document.getElementById("clickCount");
+const startClickingButton = document.getElementById("startClicking");
+const autoClickMessage = document.getElementById("autoClickMessage");
+const selectButtonCard = document.getElementById("selectButtonCard"); // New card for step 2
+const clickControlSection = document.getElementById("clickControlSection"); // Card for step 3
+
+// DOM Elements - Theme Toggle
+const themeToggle = document.getElementById('themeToggle');
+
 
 // --- Event Listeners ---
+
+// Tab switching logic
+autoFillTab.addEventListener("click", () => switchTab('autoFill'));
+autoClickTab.addEventListener("click", () => switchTab('autoClick'));
+
+// Theme toggle logic
+themeToggle.addEventListener('change', () => {
+  document.body.classList.toggle('dark', themeToggle.checked);
+  // Also toggle dark class on the main container and relevant cards
+  document.querySelector('.main-container').classList.toggle('dark', themeToggle.checked);
+  document.querySelectorAll('.card').forEach(card => card.classList.toggle('dark', themeToggle.checked));
+  document.querySelectorAll('.section-heading').forEach(heading => heading.classList.toggle('dark', themeToggle.checked));
+  document.querySelectorAll('.card-heading').forEach(heading => heading.classList.toggle('dark', themeToggle.checked));
+  document.querySelectorAll('.action-button').forEach(button => button.classList.toggle('dark', themeToggle.checked));
+  document.querySelectorAll('.form-input').forEach(input => input.classList.toggle('dark', themeToggle.checked));
+  document.querySelectorAll('.drop-area').forEach(drop => drop.classList.toggle('dark', themeToggle.checked));
+  document.querySelectorAll('.browse-button').forEach(button => button.classList.toggle('dark', themeToggle.checked));
+  document.querySelectorAll('.file-status').forEach(status => status.classList.toggle('dark', themeToggle.checked));
+  document.querySelectorAll('.headers-list').forEach(list => list.classList.toggle('dark', themeToggle.checked));
+  document.querySelectorAll('.headers-list span').forEach(span => span.classList.toggle('dark', themeToggle.checked));
+  document.querySelectorAll('.checkbox-label').forEach(label => label.classList.toggle('dark', themeToggle.checked));
+  document.querySelectorAll('.radio-label').forEach(label => label.classList.toggle('dark', themeToggle.checked));
+  document.querySelectorAll('.message-box').forEach(box => box.classList.toggle('dark', themeToggle.checked));
+  document.querySelectorAll('.auto-mapped-badge').forEach(badge => badge.classList.toggle('dark', themeToggle.checked));
+  document.querySelectorAll('.tab-buttons').forEach(buttons => buttons.classList.toggle('dark', themeToggle.checked));
+  document.querySelectorAll('.tab-button').forEach(button => button.classList.toggle('dark', themeToggle.checked));
+  document.querySelectorAll('#clickableButtonsContainer').forEach(container => container.classList.toggle('dark', themeToggle.checked));
+  document.querySelectorAll('#clickableButtonsContainer > div').forEach(div => div.classList.toggle('dark', themeToggle.checked));
+  document.querySelectorAll('#clickableButtonsContainer label').forEach(label => label.classList.toggle('dark', themeToggle.checked));
+  document.querySelectorAll('#clickControlSection').forEach(section => section.classList.toggle('dark', themeToggle.checked));
+  document.querySelectorAll('#clickControlSection label').forEach(label => label.classList.toggle('dark', themeToggle.checked));
+  document.querySelectorAll('.selected-button-highlight').forEach(highlight => highlight.classList.toggle('dark', themeToggle.checked));
+  document.querySelectorAll('.slider').forEach(slider => slider.classList.toggle('dark', themeToggle.checked));
+
+
+  localStorage.setItem('theme', themeToggle.checked ? 'dark' : 'light');
+});
 
 // File input change
 fileInput.addEventListener('change', handleFile);
 
 // Drag and drop functionality for file input
-fileInput.parentElement.addEventListener('dragover', (e) => {
+dropArea.addEventListener('dragover', (e) => {
     e.preventDefault();
-    e.currentTarget.classList.add('border-blue-500', 'text-blue-600');
+    dropArea.classList.add('border-blue-600', 'bg-blue-100', 'dark:border-indigo-500', 'dark:bg-indigo-900');
+    fileNameDisplay.classList.add('group-hover:text-blue-700', 'dark:group-hover:text-blue-300'); // Add hover text color
 });
-fileInput.parentElement.addEventListener('dragleave', (e) => {
+dropArea.addEventListener('dragleave', (e) => {
     e.preventDefault();
-    e.currentTarget.classList.remove('border-blue-500', 'text-blue-600');
+    dropArea.classList.remove('border-blue-600', 'bg-blue-100', 'dark:border-indigo-500', 'dark:bg-indigo-900');
+    fileNameDisplay.classList.remove('group-hover:text-blue-700', 'dark:group-hover:text-blue-300');
 });
-fileInput.parentElement.addEventListener('drop', (e) => {
+dropArea.addEventListener('drop', (e) => {
     e.preventDefault();
-    e.currentTarget.classList.remove('border-blue-500', 'text-blue-600');
+    dropArea.classList.remove('border-blue-600', 'bg-blue-100', 'dark:border-indigo-500', 'dark:bg-indigo-900');
+    fileNameDisplay.classList.remove('group-hover:text-blue-700', 'dark:group-hover:text-blue-300');
     if (e.dataTransfer.files.length > 0) {
         fileInput.files = e.dataTransfer.files;
         handleFile();
@@ -1904,21 +1650,217 @@ scanFieldsButton.addEventListener('click', async () => {
 });
 
 // Fill data button click
-fillDataButton.addEventListener('click', () => fillDataInTab(false)); // Manual fill
+fillDataButton.addEventListener('click', () => fillDataInTab(false));
 
 // One-Click Autofill button click
-oneClickAutofillButton.addEventListener('click', () => fillDataInTab(true)); // Auto-fill
+oneClickAutofillButton.addEventListener('click', () => fillDataInTab(true));
 
-// NEW: Test Fill button click
+// Test Fill button click
 testFillButton.addEventListener('click', () => testFillFirstRow());
 
-// NEW: Preview Values button click
+// Preview Values button click
 previewValuesButton.addEventListener('click', () => previewMappedValues());
 
-// Load learned mappings on startup
-document.addEventListener('DOMContentLoaded', loadLearnedMappings);
+// Auto Click Event Listeners
+scanButtons.addEventListener("click", async () => {
+    displayFileStatusMessage('<i class="fas fa-spinner fa-spin"></i>Scanning for clickable buttons...', 'info', autoClickMessage, true);
+    scanButtons.disabled = true;
+    scanButtons.innerHTML = 'Scanning... <span class="loading-spinner"></span>';
+    clickableButtonsContainer.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-sm p-2">Scanning...</p>'; // Clear previous buttons and show scanning message
+
+    try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!tab) {
+            displayFileStatusMessage('Could not get active tab.', 'error', autoClickMessage, true);
+            return;
+        }
+
+        const response = await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ['content.js']
+        }).then(() => {
+            return chrome.tabs.sendMessage(tab.id, { action: "scanClickables" });
+        });
+
+        if (response && response.clickables) {
+            if (response.clickables.length > 0) {
+                clickableButtonsContainer.innerHTML = ''; // Clear scanning message
+                response.clickables.forEach((btn, index) => {
+                    const btnDiv = document.createElement("div");
+                    btnDiv.className = "flex items-center mb-1 last:mb-0 border-b border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors duration-200 p-2"; // Add styling classes
+                    btnDiv.innerHTML = `
+                        <input type="radio" name="clickable" value="${btn.stableId}" id="btn-${index}" class="mr-2 flex-shrink-0">
+                        <label for="btn-${index}" class="text-sm text-gray-700 dark:text-gray-300 flex-grow">${btn.text}</label>
+                    `;
+                    clickableButtonsContainer.appendChild(btnDiv);
+
+                    // Add event listener to highlight selected radio button
+                    btnDiv.querySelector('input[type="radio"]').addEventListener('change', (e) => {
+                        document.querySelectorAll('#clickableButtonsContainer > div').forEach(div => {
+                            div.classList.remove('selected-button-highlight', 'dark:selected-button-highlight');
+                        });
+                        if (e.target.checked) {
+                            btnDiv.classList.add('selected-button-highlight', document.body.classList.contains('dark') ? 'dark:selected-button-highlight' : '');
+                        }
+                    });
+                });
+                selectButtonCard.classList.remove("hidden"); // Show Step 2 card
+                clickControlSection.classList.remove("hidden"); // Show Step 3 card
+                displayFileStatusMessage(`<i class="fas fa-check-circle"></i>Found ${response.clickables.length} clickable elements.`, 'success', autoClickMessage, true);
+            } else {
+                clickableButtonsContainer.innerHTML = "<p class='text-gray-500 dark:text-gray-400 text-sm p-2'>No clickable buttons found on this page.</p>";
+                selectButtonCard.classList.add("hidden");
+                clickControlSection.classList.add("hidden");
+                displayFileStatusMessage('<i class="fas fa-info-circle"></i>No clickable buttons found on the current tab.', 'info', autoClickMessage, true);
+            }
+        } else {
+            clickableButtonsContainer.innerHTML = "<p class='text-gray-500 dark:text-gray-400 text-sm p-2'>Failed to scan for buttons.</p>";
+            selectButtonCard.classList.add("hidden");
+            clickControlSection.classList.add("hidden");
+            displayFileStatusMessage('<i class="fas fa-exclamation-triangle"></i>Failed to get clickable elements from the current tab.', 'error', autoClickMessage, true);
+        }
+    } catch (error) {
+        console.error("Error scanning buttons:", error);
+        displayFileStatusMessage(`<i class="fas fa-exclamation-triangle"></i>Error scanning buttons: ${error.message}.`, 'error', autoClickMessage, true);
+        clickableButtonsContainer.innerHTML = "<p class='text-gray-500 dark:text-gray-400 text-sm p-2'>Error scanning for buttons. Check console for details.</p>";
+        selectButtonCard.classList.add("hidden");
+        clickControlSection.classList.add("hidden");
+    } finally {
+        scanButtons.disabled = false;
+        scanButtons.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Scan for Clickable Buttons';
+    }
+});
+
+startClickingButton.addEventListener("click", async () => {
+    const count = parseInt(clickCountInput.value);
+    const selected = document.querySelector('input[name="clickable"]:checked');
+    const stableId = selected?.value;
+
+    if (isNaN(count) || count < 1) {
+        displayFileStatusMessage("Please enter a valid number of clicks (1 or more).", "error", autoClickMessage, false);
+        return;
+    }
+
+    if (!stableId) {
+        displayFileStatusMessage("Please select a button to click.", "error", autoClickMessage, false);
+        return;
+    }
+
+    displayFileStatusMessage(`<i class="fas fa-circle-notch fa-spin"></i>Attempting to click ${count} time(s)...`, 'info', autoClickMessage, true);
+    startClickingButton.disabled = true;
+    startClickingButton.innerHTML = 'Clicking... <span class="loading-spinner"></span>';
+
+
+    try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!tab) {
+            displayFileStatusMessage('Could not get active tab.', 'error', autoClickMessage, false);
+            return;
+        }
+
+        const response = await chrome.tabs.sendMessage(tab.id, {
+            action: "performClick",
+            stableId,
+            count
+        });
+
+        if (response?.status === "success") {
+            displayFileStatusMessage(`<i class="fas fa-check-circle"></i>Clicked ${count} time(s) successfully.`, "success", autoClickMessage, true);
+        } else {
+            console.error(`Error during click: ${response?.message || 'Unknown error.'}`);
+            displayFileStatusMessage(`<i class="fas fa-exclamation-triangle"></i>Failed to click: ${response?.message || 'Unknown error.'}`, "error", autoClickMessage, true);
+        }
+    } catch (error) {
+        console.error("Error performing click:", error);
+        displayFileStatusMessage(`<i class="fas fa-exclamation-triangle"></i>Error performing click: ${error.message}.`, "error", autoClickMessage, true);
+    } finally {
+        startClickingButton.disabled = false;
+        startClickingButton.innerHTML = '<i class="fas fa-bullseye mr-2"></i>Start Clicking';
+    }
+});
+
+// Load learned mappings and initial tab on startup
+document.addEventListener('DOMContentLoaded', () => {
+    loadLearnedMappings();
+    loadTabPreference();
+    // Load theme preference on DOMContentLoaded
+    const theme = localStorage.getItem('theme');
+    if (theme === 'dark') {
+      document.body.classList.add('dark');
+      // Apply dark class to other elements as well for initial load
+      document.querySelector('.main-container').classList.add('dark');
+      document.querySelectorAll('.card').forEach(card => card.classList.add('dark'));
+      document.querySelectorAll('.section-heading').forEach(heading => heading.classList.add('dark'));
+      document.querySelectorAll('.card-heading').forEach(heading => heading.classList.add('dark'));
+      document.querySelectorAll('.action-button').forEach(button => button.classList.add('dark'));
+      document.querySelectorAll('.form-input').forEach(input => input.classList.add('dark'));
+      document.querySelectorAll('.drop-area').forEach(drop => drop.classList.add('dark'));
+      document.querySelectorAll('.browse-button').forEach(button => button.classList.add('dark'));
+      document.querySelectorAll('.file-status').forEach(status => status.classList.add('dark'));
+      document.querySelectorAll('.headers-list').forEach(list => list.classList.add('dark'));
+      document.querySelectorAll('.headers-list span').forEach(span => span.classList.add('dark'));
+      document.querySelectorAll('.checkbox-label').forEach(label => label.classList.add('dark'));
+      document.querySelectorAll('.radio-label').forEach(label => label.classList.add('dark'));
+      document.querySelectorAll('.message-box').forEach(box => box.classList.add('dark'));
+      document.querySelectorAll('.auto-mapped-badge').forEach(badge => badge.classList.add('dark'));
+      document.querySelectorAll('.tab-buttons').forEach(buttons => buttons.classList.add('dark'));
+      document.querySelectorAll('.tab-button').forEach(button => button.classList.add('dark'));
+      document.querySelectorAll('#clickableButtonsContainer').forEach(container => container.classList.add('dark'));
+      document.querySelectorAll('#clickableButtonsContainer > div').forEach(div => div.classList.add('dark'));
+      document.querySelectorAll('#clickableButtonsContainer label').forEach(label => label.classList.add('dark'));
+      document.querySelectorAll('#clickControlSection').forEach(section => section.classList.add('dark'));
+      document.querySelectorAll('#clickControlSection label').forEach(label => label.classList.add('dark'));
+      document.querySelectorAll('.selected-button-highlight').forEach(highlight => highlight.classList.add('dark'));
+      document.querySelectorAll('.slider').forEach(slider => slider.classList.add('dark'));
+      themeToggle.checked = true;
+    }
+});
+
 
 // --- Functions ---
+
+/**
+ * Switches between the Auto Fill and Auto Click tabs.
+ * @param {string} activeTabId - The ID of the tab to activate ('autoFill' or 'autoClick').
+ */
+async function switchTab(activeTabId) {
+    // Remove active class from all tabs and add to the selected one
+    autoFillTab.classList.remove('active', 'dark:active');
+    autoClickTab.classList.remove('active', 'dark:active');
+    
+    const targetTabButton = document.getElementById(`${activeTabId}Tab`);
+    targetTabButton.classList.add('active');
+    if (document.body.classList.contains('dark')) {
+        targetTabButton.classList.add('dark:active');
+    }
+
+    // Hide all tab sections and show the selected one
+    autoFillSection.classList.add('hidden');
+    autoClickSection.classList.add('hidden');
+    document.getElementById(`${activeTabId}Section`).classList.remove('hidden');
+
+    // Save tab preference
+    try {
+        await chrome.storage.sync.set({ activeTab: activeTabId });
+    } catch (error) {
+        console.error('Error saving tab preference:', error);
+    }
+}
+
+/**
+ * Loads the last active tab preference from chrome.storage.sync.
+ */
+async function loadTabPreference() {
+    try {
+        const result = await chrome.storage.sync.get('activeTab');
+        const lastActiveTab = result.activeTab || 'autoFill'; // Default to autoFill
+        switchTab(lastActiveTab);
+    } catch (error) {
+        console.error('Error loading tab preference:', error);
+        switchTab('autoFill'); // Fallback to default
+    }
+}
+
 
 /**
  * Handles the file selection and reads its content.
@@ -1926,12 +1868,12 @@ document.addEventListener('DOMContentLoaded', loadLearnedMappings);
 function handleFile() {
     const file = fileInput.files[0];
     if (!file) {
-        displayMessage(fileUploadMessage, 'No file selected.', 'error');
+        displayFileStatusMessage('<i class="fas fa-exclamation-triangle"></i>No file selected.', 'error', fileStatusMessage, true);
         return;
     }
 
-    fileNameDisplay.textContent = file.name;
-    displayMessage(fileUploadMessage, `Reading "${file.name}"...`, 'info');
+    fileNameDisplay.textContent = `File: "${file.name}"`; // Update text to show file name
+    displayFileStatusMessage(`<i class="fas fa-spinner fa-spin"></i>Reading "${file.name}"...`, 'info', fileStatusMessage, true);
 
     const reader = new FileReader();
 
@@ -1947,7 +1889,7 @@ function handleFile() {
             sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
 
             if (sheetData.length === 0) {
-                displayMessage(fileUploadMessage, 'The selected file is empty or could not be parsed.', 'error');
+                displayFileStatusMessage('<i class="fas fa-exclamation-triangle"></i>The selected file is empty or could not be parsed.', 'error', fileStatusMessage, true);
                 dataDisplaySection.classList.add('hidden');
                 oneClickAutofillButton.classList.add('hidden'); // Hide autofill if no data
                 return;
@@ -1958,7 +1900,7 @@ function handleFile() {
             
             displayHeaders(headers);
             dataDisplaySection.classList.remove('hidden');
-            displayMessage(fileUploadMessage, `File "${file.name}" loaded successfully.`, 'success');
+            displayFileStatusMessage(`<i class="fas fa-check-circle"></i>File "${file.name}" loaded successfully.`, 'success', fileStatusMessage, true);
 
             // If fields were already scanned, re-setup mapping with new headers and re-auto-map
             if (Object.keys(groupedFormFields).length > 0) { // Check groupedFormFields for existing scan
@@ -1973,7 +1915,7 @@ function handleFile() {
 
         } catch (error) {
             console.error("Error reading file:", error);
-            displayMessage(fileUploadMessage, `Error reading file: ${error.message}. Please ensure it's a valid spreadsheet format.`, 'error');
+            displayFileStatusMessage(`<i class="fas fa-exclamation-triangle"></i>Error reading file: ${error.message}. Please ensure it's a valid spreadsheet format.`, 'error', fileStatusMessage, true);
             dataDisplaySection.classList.add('hidden');
             oneClickAutofillButton.classList.add('hidden');
         }
@@ -1981,7 +1923,7 @@ function handleFile() {
 
     reader.onerror = function(e) {
         console.error("FileReader error:", e);
-        displayMessage(fileUploadMessage, `Error reading file: ${e.target.error.name}.`, 'error');
+        displayFileStatusMessage(`<i class="fas fa-exclamation-triangle"></i>Error reading file: ${e.target.error.name}.`, 'error', fileStatusMessage, true);
         dataDisplaySection.classList.add('hidden');
         oneClickAutofillButton.classList.add('hidden');
     };
@@ -1998,12 +1940,13 @@ function displayHeaders(headersArray) {
     if (headersArray.length > 0) {
         headersArray.forEach(header => {
             const span = document.createElement('span');
-            span.className = 'inline-block bg-blue-100 text-blue-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full mb-2';
+            span.className = 'bg-indigo-100 text-indigo-800 px-5 py-2 rounded-full text-base font-medium shadow-sm flex items-center transition-colors duration-200 hover:bg-indigo-200 cursor-default dark:bg-indigo-700 dark:text-indigo-100 dark:hover:bg-indigo-600';
             span.textContent = header;
             headersDisplay.appendChild(span);
         });
     } else {
         headersDisplay.textContent = 'No headers found in the first row.';
+        headersDisplay.classList.add('text-gray-500', 'dark:text-gray-400', 'text-sm');
     }
 }
 
@@ -2012,11 +1955,11 @@ function displayHeaders(headersArray) {
  */
 async function scanCurrentTabFields() {
     if (!headers || headers.length === 0) {
-        displayMessage(scanMessage, 'Please upload a file with headers first.', 'error');
+        displayMessage(scanMessage, '<i class="fas fa-exclamation-triangle mr-2"></i>Please upload a file with headers first.', 'error', true);
         return;
     }
 
-    displayMessage(scanMessage, 'Scanning current tab for fields...', 'info');
+    displayMessage(scanMessage, '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning current tab for fields...', 'info', true);
     scanFieldsButton.disabled = true; // Disable button during scan
     scanFieldsButton.innerHTML = 'Scanning... <span class="loading-spinner"></span>';
     oneClickAutofillButton.classList.add('hidden'); // Hide autofill button during scan
@@ -2025,7 +1968,7 @@ async function scanCurrentTabFields() {
         // Get the active tab
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (!tab) {
-            displayMessage(scanMessage, 'Could not get active tab.', 'error');
+            displayMessage(scanMessage, 'Could not get active tab.', 'error', false);
             return;
         }
 
@@ -2041,35 +1984,35 @@ async function scanCurrentTabFields() {
         if (response && response.fields) {
             availableFormFields = response.fields;
             if (availableFormFields.length > 0) {
-                groupedFormFields = groupFieldsBySignature(availableFormFields); // NEW: Use smarter grouping
+                groupedFormFields = groupFieldsBySignature(availableFormFields); // Use smarter grouping
                 setupFieldMapping(groupedFormFields, headers); // Call existing setup to build UI with grouped fields
                 autoMapFields(groupedFormFields, headers); // Call auto-map to pre-select dropdowns for groups
                 fieldMappingSection.classList.remove('hidden');
-                displayMessage(scanMessage, `Found ${availableFormFields.length} fields on the page, grouped into ${Object.keys(groupedFormFields).length} sections. Attempting auto-mapping.`, 'success');
+                displayMessage(scanMessage, `<i class="fas fa-check-circle mr-2"></i>Found ${availableFormFields.length} fields on the page, grouped into ${Object.keys(groupedFormFields).length} sections. Attempting auto-mapping.`, 'success', true);
                 oneClickAutofillButton.classList.remove('hidden'); // Show autofill button if fields found
             } else {
                 fieldMappingSection.classList.add('hidden');
-                displayMessage(scanMessage, 'No input fields found on the current tab.', 'info');
+                displayMessage(scanMessage, '<i class="fas fa-info-circle mr-2"></i>No input fields found on the current tab.', 'info', true);
                 oneClickAutofillButton.classList.add('hidden'); // Hide autofill button if no fields
             }
         } else {
             fieldMappingSection.classList.add('hidden');
-            displayMessage(scanMessage, 'Failed to get fields from the current tab.', 'error');
+            displayMessage(scanMessage, '<i class="fas fa-exclamation-triangle mr-2"></i>Failed to get fields from the current tab.', 'error', true);
             oneClickAutofillButton.classList.add('hidden'); // Hide autofill button if error
         }
     } catch (error) {
         console.error("Error scanning fields:", error);
-        displayMessage(scanMessage, `Error scanning fields: ${error.message}.`, 'error');
+        displayMessage(scanMessage, `<i class="fas fa-exclamation-triangle mr-2"></i>Error scanning fields: ${error.message}.`, 'error', true);
         fieldMappingSection.classList.add('hidden');
         oneClickAutofillButton.classList.add('hidden'); // Hide autofill button if error
     } finally {
         scanFieldsButton.disabled = false;
-        scanFieldsButton.innerHTML = 'Scan Current Tab for Fields';
+        scanFieldsButton.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Scan Current Tab for Fields';
     }
 }
 
 /**
- * NEW: Generates a comprehensive signature for a form field using multiple attributes.
+ * Generates a comprehensive signature for a form field using multiple attributes.
  * This signature is used for smarter grouping and fuzzy matching.
  * @param {Object} field - The field object from content.js.
  * @returns {string} A combined string representing the field's unique signature.
@@ -2081,18 +2024,17 @@ function generateFieldSignature(field) {
         field.placeholder,
         field.ariaLabel,
         field.title,
-        field.autocomplete, // Include autocomplete for better context
-        field.surroundingText // This is already quite good, but combine with others
-    ].filter(Boolean) // Remove empty strings
-     .map(str => str.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim()) // Clean and normalize
-     .filter(str => str.length > 1); // Remove very short, non-descriptive parts
+        field.autocomplete,
+        field.surroundingText
+    ].filter(Boolean)
+     .map(str => str.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim())
+     .filter(str => str.length > 1);
 
-    // Use a Set to ensure unique parts, then join
     return [...new Set(parts)].join(" | ");
 }
 
 /**
- * NEW: Groups form fields by their generated signature to create logical sections.
+ * Groups form fields by their generated signature to create logical sections.
  * @param {Array<Object>} formFields - Array of field objects from content.js.
  * @returns {Object} An object where keys are grouping contexts (signatures) and values are arrays of fields.
  */
@@ -2100,7 +2042,6 @@ function groupFieldsBySignature(formFields) {
     const groups = {};
     formFields.forEach(field => {
         const signature = generateFieldSignature(field);
-        // Use a fallback if the signature is empty or too generic
         const groupIdentifier = signature || field.htmlId || 'Unnamed Field Group';
         
         if (!groups[groupIdentifier]) {
@@ -2122,33 +2063,44 @@ function setupFieldMapping(groupedFields, headersArray) {
     const groupKeys = Object.keys(groupedFields);
     if (groupKeys.length === 0) {
         mappingContainer.textContent = 'No mappable field groups found on the page.';
+        mappingContainer.classList.add('text-gray-500', 'dark:text-gray-400', 'text-sm');
         return;
     }
+    mappingContainer.classList.remove('text-gray-500', 'dark:text-gray-400', 'text-sm');
 
     groupKeys.forEach(contextKey => {
         const fieldsInGroup = groupedFields[contextKey];
         const mappingGroupItem = document.createElement('div');
-        mappingGroupItem.className = 'field-mapping-group-item mb-6 p-4 border border-gray-200 rounded-lg bg-white'; // Styling for groups
+        mappingGroupItem.className = 'field-mapping-group-item card'; // Apply card styling
+        if (document.body.classList.contains('dark')) {
+            mappingGroupItem.classList.add('dark');
+        }
 
         const groupHeader = document.createElement('h3');
-        groupHeader.className = 'text-md font-semibold text-gray-800 mb-3 flex items-center'; // Added flex for badge
-        groupHeader.textContent = contextKey; // The grouping context (e.g., "Personal Information" or "Description")
+        groupHeader.className = 'text-md font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center card-heading';
+        groupHeader.textContent = contextKey;
+        if (document.body.classList.contains('dark')) {
+            groupHeader.classList.add('dark');
+        }
         mappingGroupItem.appendChild(groupHeader);
 
         const groupControl = document.createElement('div');
-        groupControl.className = 'flex items-center space-x-2 mb-3';
+        groupControl.className = 'flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 mb-3';
 
         const label = document.createElement('label');
         label.className = 'checkbox-label flex-shrink-0';
+        if (document.body.classList.contains('dark')) {
+            label.classList.add('dark');
+        }
 
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.className = 'group-checkbox mr-2';
-        checkbox.dataset.contextKey = contextKey; // Store the context key
-        checkbox.checked = false; // Initially unchecked
+        checkbox.dataset.contextKey = contextKey;
+        checkbox.checked = false;
 
         const span = document.createElement('span');
-        span.className = 'text-sm text-gray-700';
+        span.className = 'text-sm text-gray-700 dark:text-gray-300';
         span.textContent = `Map fields for "${contextKey}"`;
 
         label.appendChild(checkbox);
@@ -2156,9 +2108,12 @@ function setupFieldMapping(groupedFields, headersArray) {
         groupControl.appendChild(label);
 
         const select = document.createElement('select');
-        select.className = 'group-mapper ml-auto flex-grow';
+        select.className = 'group-mapper flex-grow mt-2 sm:mt-0 form-input'; // Use form-input for styling
         select.dataset.contextKey = contextKey;
-        select.disabled = true; // Initially disabled
+        select.disabled = true;
+        if (document.body.classList.contains('dark')) {
+            select.classList.add('dark');
+        }
 
         const fragment = document.createDocumentFragment();
         const defaultOption = document.createElement('option');
@@ -2178,20 +2133,18 @@ function setupFieldMapping(groupedFields, headersArray) {
 
         // Display individual fields within this group (read-only)
         const fieldListContainer = document.createElement('div');
-        fieldListContainer.className = 'mt-2 text-xs text-gray-600';
+        fieldListContainer.className = 'mt-2 text-xs text-gray-600 dark:text-gray-400';
         fieldListContainer.innerHTML = '<p class="font-medium mb-1">Instances of this field on page:</p>';
         fieldsInGroup.forEach(field => {
-            // Determine a user-friendly name for display, avoiding generated IDs
             let displayName = field.labelText || field.name || field.placeholder || field.ariaLabel || field.title || 'Unnamed Field Instance';
-            // Clean up name attribute if it contains array-like indexing
             displayName = displayName.replace(/\[\d+\]/g, '').trim();
 
             if (displayName.startsWith('stable-id-') || displayName.startsWith('generated-id-')) {
-                displayName = 'Unnamed Field Instance'; // Hide internal IDs from user
+                displayName = 'Unnamed Field Instance';
             }
 
             const fieldSpan = document.createElement('span');
-            fieldSpan.className = 'inline-block bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full mr-1 mb-1';
+            fieldSpan.className = 'inline-block bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full mr-1 mb-1 dark:bg-gray-700 dark:text-gray-300';
             fieldSpan.textContent = displayName;
             fieldListContainer.appendChild(fieldSpan);
         });
@@ -2204,14 +2157,24 @@ function setupFieldMapping(groupedFields, headersArray) {
             const currentSelect = mappingContainer.querySelector(`.group-mapper[data-context-key="${e.target.dataset.contextKey}"]`);
             currentSelect.disabled = !e.target.checked;
             if (!e.target.checked) {
-                currentSelect.value = ''; // Clear selection if unchecked
+                currentSelect.value = '';
+                removeAutoMappedBadge(groupHeader); // Remove badge if unchecked
+            } else {
+                // If re-checked, try auto-mapping again for visual consistency
+                autoMapFields(groupedFields, headersArray);
             }
+        });
+
+        // Event listener for select change to save mapping and update badge
+        select.addEventListener('change', () => {
+            saveLearnedMappings(); // Save whenever a mapping is changed
+            updateBadgeForGroup(groupHeader, select.value, learnedMappings[contextKey]);
         });
     });
 }
 
 /**
- * NEW: Performs intelligent auto-mapping between grouped form fields and spreadsheet headers using Fuse.js.
+ * Performs intelligent auto-mapping between grouped form fields and spreadsheet headers using Fuse.js.
  * Populates the mapping dropdowns and checks the corresponding checkboxes for groups.
  * @param {Object} groupedFields - Object of grouped fields.
  * @param {string[]} headersArray - Array of header strings.
@@ -2231,70 +2194,98 @@ function autoMapFields(groupedFields, headersArray) {
         Object.keys(groupedFields).forEach(contextKey => {
             const checkbox = mappingContainer.querySelector(`.group-checkbox[data-context-key="${contextKey}"]`);
             const select = mappingContainer.querySelector(`.group-mapper[data-context-key="${contextKey}"]`);
-            const groupHeaderElement = checkbox.closest('.field-mapping-group-item').querySelector('h3'); // Get the h3 element for the badge
+            const groupHeaderElement = checkbox.closest('.field-mapping-group-item').querySelector('h3');
 
             if (!checkbox || !select) return;
+
+            let mappedType = 'unmapped'; // Default to unmapped
 
             // 1. Try to apply learned mapping first
             if (learnedMappings[contextKey] && headersArray.includes(learnedMappings[contextKey])) {
                 checkbox.checked = true;
                 select.disabled = false;
                 select.value = learnedMappings[contextKey];
-                addAutoMappedBadge(groupHeaderElement, 'Learned');
+                mappedType = 'learned';
                 autoMappedCount++;
                 console.log(`Auto-mapping (Learned): "${contextKey}" -> "${learnedMappings[contextKey]}"`);
-                return; // Skip fuzzy matching if learned mapping applied
-            }
-
-            // 2. Fallback to fuzzy matching
-            const result = fuse.search(contextKey)[0];
-            if (result && result.score < 0.4) { // Confidence threshold
-                const bestMatchHeader = result.item.header;
-                checkbox.checked = true;
-                select.disabled = false;
-                select.value = bestMatchHeader;
-                addAutoMappedBadge(groupHeaderElement, `Score: ${result.score.toFixed(2)}`);
-                autoMappedCount++;
-                console.log(`Auto-mapping (Fuzzy): "${contextKey}" -> "${bestMatchHeader}" (Score: ${result.score.toFixed(2)})`);
             } else {
-                // If not auto-mapped, ensure it's unchecked and disabled
-                checkbox.checked = false;
-                select.disabled = true;
-                select.value = '';
-                removeAutoMappedBadge(groupHeaderElement);
-                console.log(`No strong auto-mapping for "${contextKey}" (Best score: ${result?.score.toFixed(2) || 'N/A'})`);
+                // 2. Fallback to fuzzy matching if no learned mapping or learned mapping no longer valid
+                const result = fuse.search(contextKey)[0];
+                if (result && result.score < 0.4) { // Confidence threshold
+                    const bestMatchHeader = result.item.header;
+                    checkbox.checked = true;
+                    select.disabled = false;
+                    select.value = bestMatchHeader;
+                    mappedType = 'fuzzy';
+                    autoMappedCount++;
+                    console.log(`Auto-mapping (Fuzzy): "${contextKey}" -> "${bestMatchHeader}" (Score: ${result.score.toFixed(2)})`);
+                } else {
+                    // If not auto-mapped, ensure it's unchecked and disabled
+                    checkbox.checked = false;
+                    select.disabled = true;
+                    select.value = '';
+                    mappedType = 'unmapped';
+                    console.log(`No strong auto-mapping for "${contextKey}" (Best score: ${result?.score.toFixed(2) || 'N/A'})`);
+                }
             }
+            updateBadgeForGroup(groupHeaderElement, mappedType, mappedType === 'fuzzy' ? result.score.toFixed(2) : '');
         });
-        displayMessage(scanMessage, `Auto-mapping complete. ${autoMappedCount} fields auto-mapped. Review and adjust if needed.`, 'success');
+        displayMessage(scanMessage, `<i class="fas fa-check-circle mr-2"></i>Auto-mapping complete. ${autoMappedCount} fields auto-mapped. Review and adjust if needed.`, 'success', true);
     }).catch(error => {
         console.error("Error loading learned mappings for auto-map:", error);
-        displayMessage(scanMessage, `Error loading learned mappings: ${error.message}. Auto-mapping proceeded without them.`, 'error');
+        displayMessage(scanMessage, `<i class="fas fa-exclamation-triangle mr-2"></i>Error loading learned mappings: ${error.message}. Auto-mapping proceeded without them.`, 'error', true);
     });
 }
 
 /**
- * NEW: Adds an "Auto-Matched" badge to the group header.
+ * Adds or updates an "Auto-Matched" badge to the group header.
  * @param {HTMLElement} groupHeaderElement - The H3 element of the group.
- * @param {string} text - Text to display in the badge (e.g., "Learned", "Score: 0.15").
+ * @param {'learned'|'fuzzy'|'unmapped'} type - The type of mapping.
+ * @param {string} [scoreText=''] - Optional score text for fuzzy matches.
  */
-function addAutoMappedBadge(groupHeaderElement, text) {
-    let badge = groupHeaderElement.querySelector('.auto-matched-badge');
+function updateBadgeForGroup(groupHeaderElement, type, scoreText = '') {
+    let badge = groupHeaderElement.querySelector('.auto-mapped-badge');
     if (!badge) {
         badge = document.createElement('span');
-        badge.className = 'auto-matched-badge';
+        badge.className = 'auto-mapped-badge';
         groupHeaderElement.appendChild(badge);
     }
-    badge.textContent = `Auto-Matched (${text})`;
+    
+    // Remove previous type classes
+    badge.classList.remove('learned', 'fuzzy', 'unmapped');
+    badge.classList.add(type);
+    if (document.body.classList.contains('dark')) {
+        badge.classList.add('dark'); // Ensure dark mode class is applied to badge
+    } else {
+        badge.classList.remove('dark');
+    }
+
+    let badgeText = '';
+    if (type === 'learned') {
+        badgeText = 'Auto-Matched (Learned)';
+    } else if (type === 'fuzzy') {
+        badgeText = `Auto-Matched (Score: ${scoreText})`;
+    } else {
+        badgeText = 'Unmapped';
+    }
+    badge.textContent = badgeText;
+
+    // Hide badge if unmapped or no selection
+    if (type === 'unmapped' || !groupHeaderElement.parentElement.querySelector('.group-mapper').value) {
+        badge.classList.add('hidden');
+    } else {
+        badge.classList.remove('hidden');
+    }
 }
 
 /**
- * NEW: Removes the "Auto-Matched" badge from the group header.
+ * Removes the auto-mapped badge from a group header.
  * @param {HTMLElement} groupHeaderElement - The H3 element of the group.
  */
 function removeAutoMappedBadge(groupHeaderElement) {
-    const badge = groupHeaderElement.querySelector('.auto-matched-badge');
+    const badge = groupHeaderElement.querySelector('.auto-mapped-badge');
     if (badge) {
-        badge.remove();
+        badge.classList.add('hidden');
     }
 }
 
@@ -2306,7 +2297,8 @@ async function saveLearnedMappings() {
     mappingContainer.querySelectorAll('.group-checkbox:checked').forEach(checkbox => {
         const contextKey = checkbox.dataset.contextKey;
         const selectElement = mappingContainer.querySelector(`.group-mapper[data-context-key="${contextKey}"]`);
-        if (selectElement && selectElement.value) {
+        const mappedColumnHeader = selectElement ? selectElement.value : '';
+        if (mappedColumnHeader) {
             currentMappings[contextKey] = selectElement.value;
         }
     });
@@ -2314,6 +2306,10 @@ async function saveLearnedMappings() {
     try {
         await chrome.storage.sync.set({ learnedMappings: currentMappings });
         console.log('Learned mappings saved:', currentMappings);
+        // After saving, re-run autoMapFields to update badges based on newly learned mappings
+        if (Object.keys(groupedFormFields).length > 0 && headers.length > 0) {
+            autoMapFields(groupedFormFields, headers);
+        }
     } catch (error) {
         console.error('Error saving learned mappings:', error);
     }
@@ -2339,11 +2335,11 @@ async function loadLearnedMappings() {
  */
 async function fillDataInTab(isAutoFill = false) {
     if (!workbook || sheetData.length <= 1) { // sheetData includes headers, so >1 means actual data rows
-        displayMessage(fillDataMessage, 'Please upload a spreadsheet file first.', 'error');
+        displayMessage(fillDataMessage, '<i class="fas fa-exclamation-triangle mr-2"></i>Please upload a spreadsheet file first.', 'error', true);
         return;
     }
     if (Object.keys(groupedFormFields).length === 0) {
-        displayMessage(fillDataMessage, 'Please scan for fields on the current tab first.', 'error');
+        displayMessage(fillDataMessage, '<i class="fas fa-exclamation-triangle mr-2"></i>Please scan for fields on the current tab first.', 'error', true);
         return;
     }
 
@@ -2363,20 +2359,22 @@ async function fillDataInTab(isAutoFill = false) {
     });
 
     if (Object.keys(selectedMappings).length === 0) {
-        displayMessage(fillDataMessage, 'No fields selected for filling or no column mapped to selected groups.', 'error');
+        displayMessage(fillDataMessage, '<i class="fas fa-info-circle mr-2"></i>No fields selected for filling or no column mapped to selected groups.', 'error', true);
         return;
     }
 
-    displayMessage(fillDataMessage, 'Preparing data for filling...', 'info');
+    displayMessage(fillDataMessage, '<i class="fas fa-spinner fa-spin mr-2"></i>Preparing data for filling...', 'info', true);
     fillDataButton.disabled = true;
+    fillDataButton.innerHTML = 'Filling... <span class="loading-spinner"></span>';
     oneClickAutofillButton.disabled = true;
+    oneClickAutofillButton.innerHTML = 'One-Click Autofill... <span class="loading-spinner"></span>';
     testFillButton.disabled = true;
     previewValuesButton.disabled = true;
 
     try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (!tab) {
-            displayMessage(fillDataMessage, 'Could not get active tab.', 'error');
+            displayMessage(fillDataMessage, 'Could not get active tab.', 'error', false);
             return;
         }
 
@@ -2412,11 +2410,11 @@ async function fillDataInTab(isAutoFill = false) {
         });
 
         if (dataBatch.length === 0) {
-            displayMessage(fillDataMessage, 'No data prepared for filling based on current mappings and spreadsheet data.', 'info');
+            displayMessage(fillDataMessage, '<i class="fas fa-info-circle mr-2"></i>No data prepared for filling based on current mappings and spreadsheet data.', 'info', true);
             return;
         }
 
-        displayMessage(fillDataMessage, `Sending ${dataBatch.length} fields for filling...`, 'info');
+        displayMessage(fillDataMessage, `<i class="fas fa-paper-plane mr-2"></i>Sending ${dataBatch.length} fields for filling...`, 'info', true);
 
         // Send the entire batch to the content script
         const response = await chrome.tabs.sendMessage(tab.id, {
@@ -2426,40 +2424,42 @@ async function fillDataInTab(isAutoFill = false) {
         });
 
         if (response && response.status === 'success') {
-            displayMessage(fillDataMessage, `Data filling complete! ${response.filledCount} fields filled, ${response.skippedCount} fields skipped.`, 'success');
+            displayMessage(fillDataMessage, `<i class="fas fa-check-circle mr-2"></i>Data filling complete! ${response.filledCount} fields filled, ${response.skippedCount} fields skipped.`, 'success', true);
             saveLearnedMappings(); // Save successful mappings
         } else {
             console.error(`Error filling data: ${response?.message || 'Unknown error.'}`);
-            displayMessage(fillDataMessage, `Error filling data: ${response?.message || 'Unknown error.'}`, 'error');
+            displayMessage(fillDataMessage, `<i class="fas fa-exclamation-triangle mr-2"></i>Error filling data: ${response?.message || 'Unknown error.'}`, "error", true);
         }
 
     } catch (error) {
         console.error("Error filling data:", error);
-        displayMessage(fillDataMessage, `Error filling data: ${error.message}.`, 'error');
+        displayMessage(fillDataMessage, `<i class="fas fa-exclamation-triangle mr-2"></i>Error filling data: ${error.message}.`, 'error', true);
     } finally {
         fillDataButton.disabled = false;
+        fillDataButton.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Fill Data';
         oneClickAutofillButton.disabled = false;
+        oneClickAutofillButton.innerHTML = '<i class="fas fa-magic mr-2"></i>One-Click Autofill (Auto-Map & Fill)';
         testFillButton.disabled = false;
         previewValuesButton.disabled = false;
     }
 }
 
 /**
- * NEW: Fills only the first row of data for testing purposes.
+ * Fills only the first row of data for testing purposes.
  */
 async function testFillFirstRow() {
     if (!workbook || sheetData.length <= 1) {
-        displayMessage(testFillMessage, 'Please upload a spreadsheet file with data first.', 'error');
+        displayMessage(testFillMessage, '<i class="fas fa-exclamation-triangle mr-2"></i>Please upload a spreadsheet file with data first.', 'error', true);
         return;
     }
     if (Object.keys(groupedFormFields).length === 0) {
-        displayMessage(testFillMessage, 'Please scan for fields on the current tab first.', 'error');
+        displayMessage(testFillMessage, '<i class="fas fa-exclamation-triangle mr-2"></i>Please scan for fields on the current tab first.', 'error', true);
         return;
     }
 
     const firstDataRow = sheetData[1]; // Get the first data row (index 1 after headers)
     if (!firstDataRow) {
-        displayMessage(testFillMessage, 'No data rows found in the spreadsheet.', 'error');
+        displayMessage(testFillMessage, '<i class="fas fa-info-circle mr-2"></i>No data rows found in the spreadsheet.', 'error', true);
         return;
     }
 
@@ -2477,7 +2477,7 @@ async function testFillFirstRow() {
     });
 
     if (Object.keys(selectedMappings).length === 0) {
-        displayMessage(testFillMessage, 'No fields selected for filling or no column mapped.', 'error');
+        displayMessage(testFillMessage, '<i class="fas fa-info-circle mr-2"></i>No fields selected for filling or no column mapped.', 'error', true);
         return;
     }
 
@@ -2502,17 +2502,18 @@ async function testFillFirstRow() {
     }
 
     if (dataToFillForFirstRow.length === 0) {
-        displayMessage(testFillMessage, 'No data prepared for test filling based on current mappings and first spreadsheet row.', 'info');
+        displayMessage(testFillMessage, '<i class="fas fa-info-circle mr-2"></i>No data prepared for test filling based on current mappings and first spreadsheet row.', 'info', true);
         return;
     }
 
-    displayMessage(testFillMessage, 'Performing test fill for the first row...', 'info');
+    displayMessage(testFillMessage, '<i class="fas fa-spinner fa-spin mr-2"></i>Performing test fill for the first row...', 'info', true);
     testFillButton.disabled = true;
+    testFillButton.innerHTML = 'Testing... <span class="loading-spinner"></span>';
 
     try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (!tab) {
-            displayMessage(testFillMessage, 'Could not get active tab.', 'error');
+            displayMessage(testFillMessage, 'Could not get active tab.', 'error', false);
             return;
         }
 
@@ -2523,36 +2524,37 @@ async function testFillFirstRow() {
         });
 
         if (response && response.status === 'success') {
-            displayMessage(testFillMessage, `Test fill complete! ${response.filledCount} fields filled, ${response.skippedCount} fields skipped for the first row.`, 'success');
+            displayMessage(testFillMessage, `<i class="fas fa-check-circle mr-2"></i>Test fill complete! ${response.filledCount} fields filled, ${response.skippedCount} fields skipped for the first row.`, 'success', true);
         } else {
             console.error(`Error during test fill: ${response?.message || 'Unknown error.'}`);
-            displayMessage(testFillMessage, `Error during test fill: ${response?.message || 'Unknown error.'}`, 'error');
+            displayMessage(testFillMessage, `<i class="fas fa-exclamation-triangle mr-2"></i>Error during test fill: ${response?.message || 'Unknown error.'}`, "error", true);
         }
 
     } catch (error) {
         console.error("Error during test fill:", error);
-        displayMessage(testFillMessage, `Error during test fill: ${error.message}.`, 'error');
+        displayMessage(testFillMessage, `<i class="fas fa-exclamation-triangle mr-2"></i>Error during test fill: ${error.message}.`, 'error', true);
     } finally {
         testFillButton.disabled = false;
+        testFillButton.innerHTML = '<i class="fas fa-vial mr-2"></i>Test Fill First Row';
     }
 }
 
 /**
- * NEW: Displays a preview of mapped values for the first data row.
+ * Displays a preview of mapped values for the first data row.
  */
 function previewMappedValues() {
     if (!workbook || sheetData.length <= 1) {
-        displayMessage(previewValuesMessage, 'Please upload a spreadsheet file with data first.', 'error');
+        displayMessage(previewValuesMessage, '<i class="fas fa-exclamation-triangle mr-2"></i>Please upload a spreadsheet file with data first.', 'error', true);
         return;
     }
     if (Object.keys(groupedFormFields).length === 0) {
-        displayMessage(previewValuesMessage, 'Please scan for fields on the current tab first.', 'error');
+        displayMessage(previewValuesMessage, '<i class="fas fa-exclamation-triangle mr-2"></i>Please scan for fields on the current tab first.', 'error', true);
         return;
     }
 
     const firstDataRow = sheetData[1];
     if (!firstDataRow) {
-        displayMessage(previewValuesMessage, 'No data rows found in the spreadsheet for preview.', 'error');
+        displayMessage(previewValuesMessage, '<i class="fas fa-info-circle mr-2"></i>No data rows found in the spreadsheet for preview.', 'info', true);
         return;
     }
 
@@ -2567,7 +2569,7 @@ function previewMappedValues() {
     });
 
     if (Object.keys(selectedMappings).length === 0) {
-        displayMessage(previewValuesMessage, 'No fields selected for preview or no column mapped.', 'error');
+        displayMessage(previewValuesMessage, '<i class="fas fa-info-circle mr-2"></i>No fields selected for preview or no column mapped.', 'info', true);
         return;
     }
 
@@ -2598,7 +2600,7 @@ function previewMappedValues() {
     if (hasPreviewData) {
         displayMessage(previewValuesMessage, previewHtml, 'info', true); // Pass true for raw HTML
     } else {
-        displayMessage(previewValuesMessage, 'No preview data available based on current selections.', 'info');
+        displayMessage(previewValuesMessage, '<i class="fas fa-info-circle mr-2"></i>No preview data available based on current selections.', 'info', true);
     }
 }
 
@@ -2618,17 +2620,61 @@ function displayMessage(element, message, type, isHtml = false) {
     }
     element.className = `message-box mt-3 ${type === 'success' ? 'message-success' : type === 'error' ? 'message-error' : 'message-info'}`;
     element.classList.remove('hidden');
+    // Ensure dark mode class is applied if body is dark
+    if (document.body.classList.contains('dark')) {
+        element.classList.add('dark');
+    } else {
+        element.classList.remove('dark');
+    }
+
+    // For preview message, keep it longer, for others, 5 seconds
+    const duration = element.id === 'previewValuesMessage' ? 10000 : 5000;
     setTimeout(() => {
         element.classList.add('hidden');
         element.innerHTML = ''; // Clear content when hidden
-    }, 10000); // Hide after 10 seconds for preview, 5 for others
+    }, duration);
 }
 
-// Initial state: hide data display section and mapping section
-dataDisplaySection.classList.add('hidden');
-fieldMappingSection.classList.add('hidden');
-oneClickAutofillButton.classList.add('hidden'); // Ensure autofill button is hidden initially
+/**
+ * Displays a temporary message in the specific fileStatusMessage element.
+ * @param {string} message - The message to display.
+ * @param {'success'|'error'|'info'} type - The type of message for styling.
+ * @param {HTMLElement} element - The specific element to display the message (e.g., fileStatusMessage)
+ * @param {boolean} isHtml - If true, message is treated as HTML.
+ */
+function displayFileStatusMessage(message, type, element, isHtml = false) {
+    if (isHtml) {
+        fileMessage.innerHTML = message;
+    } else {
+        fileMessage.textContent = message;
+    }
 
+    element.classList.remove('hidden');
+    element.className = 'file-status mt-4'; // Reset class for styling
+    element.classList.add(`message-${type}`);
+
+    // Set icon based on type
+    if (type === 'success') {
+        fileStatusIcon.className = 'fas fa-check-circle text-xl mr-3';
+    } else if (type === 'error') {
+        fileStatusIcon.className = 'fas fa-exclamation-circle text-xl mr-3';
+    } else if (type === 'info') {
+        fileStatusIcon.className = 'fas fa-spinner fa-spin text-xl mr-3';
+    }
+
+    // Apply dark mode class if body is dark
+    if (document.body.classList.contains('dark')) {
+        element.classList.add('dark');
+    } else {
+        element.classList.remove('dark');
+    }
+
+    setTimeout(() => {
+        element.classList.add('hidden');
+        fileMessage.innerHTML = ''; // Clear content when hidden
+        fileStatusIcon.className = ''; // Clear icon
+    }, 5000); // Hide after 5 seconds
+}
 
 
 --- END FILE: popup.js ---
