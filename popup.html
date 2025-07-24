@@ -16,16 +16,17 @@
     <link rel="stylesheet" href="popup.css">
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center min-h-screen p-4 transition-colors duration-300 antialiased">
+    <!-- Main Container with responsive sizing and shadows -->
     <div class="main-container bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 md:p-8 max-w-lg w-full border border-gray-200 dark:border-gray-700 relative transition-colors duration-300">
         <h1 class="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100 text-center mb-6 pb-2 border-b border-gray-200 dark:border-gray-700">Extension Features</h1>
 
-        <!-- Dark Mode Toggle -->
+        <!-- Dark Mode Toggle Switch -->
         <label class="theme-switch absolute top-4 right-4 md:top-6 md:right-6">
           <input type="checkbox" id="themeToggle">
           <span class="slider"></span>
         </label>
 
-        <!-- Tab Buttons -->
+        <!-- Tab Buttons for switching features -->
         <div class="tab-buttons">
             <button id="autoFillTab" class="tab-button active">
                 <i class="fas fa-file-excel mr-2"></i>Auto Fill
@@ -35,16 +36,17 @@
             </button>
         </div>
 
-        <!-- Auto Fill Section -->
+        <!-- Auto Fill Section: For uploading spreadsheets and filling forms -->
         <section id="autoFillSection" class="tab-content">
             <h2 class="section-heading text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700"><i class="fas fa-magic mr-2 text-blue-500"></i>Auto Fill Data</h2>
             
-            <!-- Step 1: Upload File -->
+            <!-- Step 1: Upload File Card -->
             <div class="card mb-6">
                 <h3 class="card-heading text-md md:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3"><i class="fas fa-upload mr-2 text-blue-500"></i>1. Upload File</h3>
                 <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">Supported: <span class="font-medium text-gray-700 dark:text-gray-300">.XLS, .XLSX, .ODS, .CSV, .XLSM, .XLSB.</span></p>
                 
                 <div class="drop-area" id="drop-area">
+                    <!-- Hidden file input, triggered by the custom browse button -->
                     <input type="file" id="fileInput" class="hidden" accept=".xls,.xlsx,.ods,.csv,.xlsm,.xlsb" />
                     <p id="fileNameDisplay" class="text-gray-500 dark:text-gray-400 mb-4 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition duration-300 ease-in-out">
                         Drag & Drop your file here, or
@@ -54,33 +56,36 @@
                     </label>
                 </div>
                 
+                <!-- File status message area -->
                 <div id="fileStatusMessage" class="file-status mt-4 hidden">
                     <i id="fileStatusIcon" class="text-xl mr-3"></i>
                     <span id="fileMessage" class="text-lg font-medium"></span>
                 </div>
             </div>
 
-            <!-- Step 2: Display Headers and Scan Form -->
+            <!-- Step 2: Data Display & Field Mapping Card -->
             <div id="dataDisplaySection" class="card hidden">
                 <h3 class="card-heading text-md md:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3"><i class="fas fa-map-marker-alt mr-2 text-blue-500"></i>2. Map Fields</h3>
 
                 <div class="mb-4">
                     <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">File Headers:</h4>
                     <div id="headersDisplay" class="headers-list">
-                        <!-- Headers will be displayed here dynamically -->
+                        <!-- Spreadsheet headers will be displayed here dynamically -->
                     </div>
                 </div>
 
+                <!-- Scan fields button -->
                 <button id="scanFieldsButton" class="action-button emerald w-full mb-4">
                     <i class="fas fa-sync-alt mr-2"></i>Scan Current Tab for Fields
                 </button>
+                <!-- Message area for scan feedback -->
                 <div id="scanMessage" class="message-box mt-3 hidden"></div>
 
-                <!-- Field Mapping Section -->
+                <!-- Field Mapping Section (visible after scan) -->
                 <div id="fieldMappingSection" class="mt-4 hidden">
                     <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Available Form Field Groups:</h4>
                     <div id="mappingContainer">
-                        <!-- Mapping dropdowns will be inserted here dynamically -->
+                        <!-- Dynamic mapping dropdowns for each grouped field -->
                     </div>
                     <div class="flex items-center mt-4">
                         <label class="checkbox-label mr-3 text-sm">
@@ -89,7 +94,7 @@
                         </label>
                     </div>
 
-                    <!-- Test Fill / Preview Buttons -->
+                    <!-- Action buttons for testing and previewing -->
                     <div class="flex flex-col space-y-2 mt-4">
                         <button id="testFillButton" class="action-button secondary w-full">
                             <i class="fas fa-vial mr-2"></i>Test Fill First Row
@@ -102,22 +107,26 @@
                     </div>
                 </div>
 
+                <!-- Main fill data button -->
                 <button id="fillDataButton" class="action-button primary w-full mt-6">
                     <i class="fas fa-paper-plane mr-2"></i>Fill Data
                 </button>
+                <!-- One-Click Autofill button (hidden by default) -->
                 <button id="oneClickAutofillButton" class="action-button primary w-full mt-2 hidden text-sm py-1.5 px-2">
                     <i class="fas fa-magic mr-1 text-sm"></i>One-Click Autofill (Auto-Map &amp; Fill)
                 </button>
+                <!-- Message area for fill data feedback -->
                 <div id="fillDataMessage" class="message-box mt-3 hidden"></div>
             </div>
         </section>
 
-        <!-- Auto Click Section -->
+        <!-- Auto Click Section: For automating button clicks -->
         <section id="autoClickSection" class="tab-content hidden">
             <h2 class="section-heading text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700"><i class="fas fa-mouse-pointer mr-2 text-indigo-500"></i>Auto Click Buttons</h2>
+            <!-- Message area for auto click feedback -->
             <div id="autoClickMessage" class="message-box mb-4 hidden"></div>
             
-            <!-- Step 1: Scan for Clickable Elements -->
+            <!-- Step 1: Scan for Clickable Elements Card -->
             <div class="card mb-6">
                 <h3 class="card-heading text-md md:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3"><i class="fas fa-search mr-2 text-indigo-500"></i>1. Scan for Clickable Elements</h3>
                 <p class="text-gray-600 dark:text-gray-400 text-sm mb-3">Find buttons and other clickable elements on the current page.</p>
@@ -126,16 +135,16 @@
                 </button>
             </div>
             
-            <!-- Step 2: Select a Button -->
+            <!-- Step 2: Select a Button Card (visible after scan) -->
             <div id="selectButtonCard" class="card hidden mb-6">
                 <h3 class="card-heading text-md md:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3"><i class="fas fa-hand-pointer mr-2 text-indigo-500"></i>2. Select a Button</h3>
                 <div id="clickableButtonsContainer" class="max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 p-2 mb-4">
-                    <!-- Clickable buttons will be listed here -->
+                    <!-- Clickable buttons will be listed here dynamically as radio buttons -->
                     <p class="text-gray-500 dark:text-gray-400 text-sm p-2">No buttons found yet. Click 'Scan' above.</p>
                 </div>
             </div>
 
-            <!-- Step 3: Choose Number of Clicks -->
+            <!-- Step 3: Choose Number of Clicks & Execute Card (visible after scan) -->
             <div id="clickControlSection" class="card hidden">
                 <h3 class="card-heading text-md md:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3"><i class="fas fa-play-circle mr-2 text-indigo-500"></i>3. Choose Number of Clicks & Execute</h3>
                 <label for="clickCount" class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Number of clicks:</label>
@@ -151,14 +160,21 @@
     <script src="xlsx.full.min.js"></script>
     <script src="popup.js"></script>
     <script>
-        // Global error handler for better debugging
+        // Global error handler for better debugging in the popup context
         window.onerror = function (msg, url, lineNo, columnNo, error) {
             console.error('Global Error (popup.html):', { msg, url, lineNo, columnNo, error });
             const errorMessageElement = document.getElementById('fileStatusMessage') || document.getElementById('scanMessage') || document.getElementById('fillDataMessage') || document.getElementById('autoClickMessage');
             if (errorMessageElement) {
-                errorMessageElement.innerHTML = `<i class="fas fa-exclamation-circle text-red-500 text-xl mr-3"></i><span class="text-lg font-medium">An unexpected error occurred: <strong>${msg}</strong>. Check console for details.</span>`;
+                // Display a user-friendly error message, avoiding specific internal details
+                errorMessageElement.innerHTML = `<i class="fas fa-exclamation-circle text-red-500 text-xl mr-3"></i><span class="text-lg font-medium">An unexpected error occurred. Please try again. If the issue persists, check the browser's console for more details.</span>`;
                 errorMessageElement.className = 'file-status message-error';
                 errorMessageElement.classList.remove('hidden');
+                
+                // Set a timeout to hide the error message after a few seconds
+                setTimeout(() => {
+                    errorMessageElement.classList.add('hidden');
+                    errorMessageElement.innerHTML = '';
+                }, 7000); // Increased visibility duration for critical errors
             }
         };
     </script>

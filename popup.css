@@ -1,50 +1,30 @@
 /* popup.css */
 
-/* Define CSS Variables for theming */
+/* Define CSS Variables for theming (Light and Dark Mode) */
 :root {
+  /* Light Mode Colors */
   --bg-color-light: #f9fafb; /* gray-50 */
-  --bg-color-dark: #1f2937; /* gray-800 */
-  
   --text-color-light: #1f2937; /* Dark gray */
-  --text-color-dark: #e5e7eb; /* Light gray */
-
   --header-text-color-light: #111827; /* Darker gray */
-  --header-text-color-dark: #f8fafc; /* White */
-
   --card-bg-light: #ffffff; /* White */
-  --card-bg-dark: #2d3748; /* Darker card */
-
   --border-color-light: #e5e7eb; /* Light border */
-  --border-color-dark: #4a5568; /* Dark border */
 
   /* Primary Action Button (Blue) */
   --primary-button-bg-light: #2563eb; /* blue-600 */
   --primary-button-hover-bg-light: #1d4ed8; /* blue-700 */
-  --primary-button-shadow-light: rgba(37, 99, 235, 0.5); /* blue-600 with opacity */
-  --primary-button-bg-dark: #4f46e5; /* indigo-600 */
-  --primary-button-hover-bg-dark: #4338ca; /* indigo-700 */
-  --primary-button-shadow-dark: rgba(79, 70, 229, 0.5); /* indigo-600 with opacity */
+  --primary-button-shadow-light: 37, 99, 235; /* RGB for blue-600 */
 
-  /* Secondary Action Button (Emerald for Scan, general secondary) */
-  --secondary-button-bg-light: #6b7280; /* gray-500 for general secondary */
+  /* Secondary Action Button (Emerald for Scan, gray for general secondary) */
+  --secondary-button-bg-light: #6b7280; /* gray-500 */
   --secondary-button-hover-bg-light: #4b5563; /* gray-600 */
-  --secondary-button-bg-dark: #4a5568; /* gray-700 for general secondary */
-  --secondary-button-hover-bg-dark: #616e80; /* gray-600 */
   
   --emerald-button-bg-light: #059669; /* emerald-600 */
   --emerald-button-hover-bg-light: #047857; /* emerald-700 */
-  --emerald-button-shadow-light: rgba(5, 150, 105, 0.5); /* emerald-600 with opacity */
-  --emerald-button-bg-dark: #065f46; /* emerald-800 */
-  --emerald-button-hover-bg-dark: #047857; /* emerald-700 */
-  --emerald-button-shadow-dark: rgba(6, 95, 70, 0.5); /* emerald-800 with opacity */
-
+  --emerald-button-shadow-light: 5, 150, 105; /* RGB for emerald-600 */
 
   --input-border-light: #d1d5db; /* gray-300 */
-  --input-border-dark: #4a5568; /* gray-700 */
   --input-focus-ring-light: #60a5fa; /* blue-400 */
-  --input-focus-ring-dark: #818cf8; /* indigo-400 */
   --input-focus-ring-rgb-values-light: 96, 165, 250;
-  --input-focus-ring-rgb-values-dark: 129, 140, 248;
 
   /* Drop Area */
   --drop-area-border-light: #60a5fa; /* blue-400 */
@@ -53,12 +33,6 @@
   --drop-area-text-light: #6b7280; /* gray-500 */
   --drop-area-hover-text-light: #1e40af; /* blue-800 */
   
-  --drop-area-border-dark: #6366f1; /* indigo-500 */
-  --drop-area-bg-dark: #3730a3; /* indigo-900 */
-  --drop-area-hover-bg-dark: #4f46e5; /* indigo-700 */
-  --drop-area-text-dark: #a0aec0; /* gray-400 */
-  --drop-area-hover-text-dark: #e0e7ff; /* indigo-100 */
-
   /* File Status Message */
   --file-status-success-bg-light: #d1fae5; /* green-100 */
   --file-status-success-border-light: #34d399; /* green-400 */
@@ -75,6 +49,63 @@
   --file-status-info-text-light: #1e40af; /* blue-700 */
   --file-status-info-icon-light: #3b82f6; /* blue-500 */
 
+  /* Headers List Badges */
+  --header-badge-bg-light: #e0e7ff; /* indigo-100 */
+  --header-badge-text-light: #3730a3; /* indigo-800 */
+  --header-badge-hover-bg-light: #c7d2fe; /* indigo-200 */
+  
+  /* Auto-Mapped Badges */
+  --auto-mapped-learned-bg: #bfdbfe; /* blue-200 */
+  --auto-mapped-learned-text: #1e40af; /* blue-800 */
+  --auto-mapped-fuzzy-bg: #d1fae5; /* green-200 */
+  --auto-mapped-fuzzy-text: #065f46; /* green-800 */
+  --auto-mapped-unmapped-bg: #e5e7eb; /* gray-200 */
+  --auto-mapped-unmapped-text: #4b5563; /* gray-800 */
+
+  /* Tab Buttons */
+  --tab-button-bg: #e5e7eb; /* gray-200 */
+  --tab-button-hover-bg: #d1d5db; /* gray-300 */
+  --tab-button-active-bg: #ffffff;
+  --tab-button-active-text: #2563eb; /* blue-600 */
+  --tab-button-text: #4b5563; /* gray-700 */
+  
+  /* Clickable Elements List */
+  --clickable-container-bg: #f9fafb; /* gray-50 */
+  --clickable-item-border: #e5e7eb; /* gray-200 */
+  --clickable-item-hover-bg: #f3f4f6; /* gray-100 */
+  --selected-button-highlight-bg: #e0f2fe; /* blue-100 */
+  --selected-button-highlight-border: #93c5fd; /* blue-300 */
+}
+
+/* Dark Mode Overrides (Default Light Mode values are above) */
+body.dark {
+  --bg-color-dark: #1f2937; /* gray-800 */
+  --text-color-dark: #e5e7eb; /* Light gray */
+  --header-text-color-dark: #f8fafc; /* White */
+  --card-bg-dark: #2d3748; /* Darker card */
+  --border-color-dark: #4a5568; /* Dark border */
+
+  --primary-button-bg-dark: #4f46e5; /* indigo-600 */
+  --primary-button-hover-bg-dark: #4338ca; /* indigo-700 */
+  --primary-button-shadow-dark: 79, 70, 229; /* RGB for indigo-600 */
+
+  --secondary-button-bg-dark: #4a5568; /* gray-700 */
+  --secondary-button-hover-bg-dark: #616e80; /* gray-600 */
+  
+  --emerald-button-bg-dark: #065f46; /* emerald-800 */
+  --emerald-button-hover-bg-dark: #047857; /* emerald-700 */
+  --emerald-button-shadow-dark: 6, 95, 70; /* RGB for emerald-800 */
+
+  --input-border-dark: #4a5568; /* gray-700 */
+  --input-focus-ring-dark: #818cf8; /* indigo-400 */
+  --input-focus-ring-rgb-values-dark: 129, 140, 248;
+
+  --drop-area-border-dark: #6366f1; /* indigo-500 */
+  --drop-area-bg-dark: #3730a3; /* indigo-900 */
+  --drop-area-hover-bg-dark: #4f46e5; /* indigo-700 */
+  --drop-area-text-dark: #a0aec0; /* gray-400 */
+  --drop-area-hover-text-dark: #e0e7ff; /* indigo-100 */
+
   --file-status-success-bg-dark: #065f46; /* green-900 */
   --file-status-success-border-dark: #34d399; /* green-400 */
   --file-status-success-text-dark: #d1fae5; /* green-100 */
@@ -90,28 +121,16 @@
   --file-status-info-text-dark: #e0f2fe; /* blue-100 */
   --file-status-info-icon-dark: #3b82f6; /* blue-500 */
 
-  /* Headers List */
-  --header-badge-bg-light: #e0e7ff; /* indigo-100 */
-  --header-badge-text-light: #3730a3; /* indigo-800 */
-  --header-badge-hover-bg-light: #c7d2fe; /* indigo-200 */
-  
   --header-badge-bg-dark: #4338ca; /* indigo-700 */
   --header-badge-text-dark: #e0e7ff; /* indigo-100 */
   --header-badge-hover-bg-dark: #4f46e5; /* indigo-600 */
 
-
-  --auto-mapped-learned-bg: #bfdbfe; /* blue-200 */
-  --auto-mapped-learned-text: #1e40af; /* blue-800 */
-  --auto-mapped-fuzzy-bg: #d1fae5; /* green-200 */
-  --auto-mapped-fuzzy-text: #065f46; /* green-800 */
-  --auto-mapped-unmapped-bg: #e5e7eb; /* gray-200 */
-  --auto-mapped-unmapped-text: #4b5563; /* gray-800 */
-
-  --tab-button-bg: #e5e7eb; /* gray-200 */
-  --tab-button-hover-bg: #d1d5db; /* gray-300 */
-  --tab-button-active-bg: #ffffff;
-  --tab-button-active-text: #2563eb; /* blue-600 */
-  --tab-button-text: #4b5563; /* gray-700 */
+  --auto-mapped-learned-bg: #4c51bf; /* indigo-700 */
+  --auto-mapped-learned-text: #e0e7ff; /* indigo-100 */
+  --auto-mapped-fuzzy-bg: #14532d; /* green-900 */
+  --auto-mapped-fuzzy-text: #dcfce7; /* green-100 */
+  --auto-mapped-unmapped-bg: #4a5568; /* gray-700 */
+  --auto-mapped-unmapped-text: #a0aec0; /* gray-400 */
 
   --tab-button-bg-dark: #2d3748; /* gray-800 */
   --tab-button-hover-bg-dark: #4a5568; /* gray-700 */
@@ -119,20 +138,14 @@
   --tab-button-active-text-dark: #ffffff;
   --tab-button-text-dark: #e2e8f0; /* gray-200 */
   
-  --clickable-container-bg: #f9fafb; /* gray-50 */
-  --clickable-item-border: #e5e7eb; /* gray-200 */
-  --clickable-item-hover-bg: #f3f4f6; /* gray-100 */
-  --selected-button-highlight-bg: #e0f2fe; /* blue-100 */
-  --selected-button-highlight-border: #93c5fd; /* blue-300 */
-
-  --clickable-container-bg-dark: #2d3748; /* gray-800 */
-  --clickable-item-border-dark: #4a5568; /* gray-700 */
-  --clickable-item-hover-bg-dark: #4a5568; /* gray-700 */
-  --selected-button-highlight-bg-dark: #4f46e5; /* indigo-600 */
-  --selected-button-highlight-border-dark: #a5b4fc; /* indigo-300 */
+  --clickable-container-bg: #2d3748; /* gray-800 */
+  --clickable-item-border: #4a5568; /* gray-700 */
+  --clickable-item-hover-bg: #4a5568; /* gray-700 */
+  --selected-button-highlight-bg: #4f46e5; /* indigo-600 */
+  --selected-button-highlight-border: #a5b4fc; /* indigo-300 */
 }
 
-/* Light Mode Defaults */
+/* Base styles for the body, applied in light mode by default */
 body {
     font-family: 'Inter', sans-serif;
     background-color: var(--bg-color-light);
@@ -140,49 +153,56 @@ body {
     transition: background-color 0.3s ease, color 0.3s ease;
     box-sizing: border-box;
     min-width: 320px; /* Ensure a minimum width for small screens */
+    /* Prevent scrollbars for the main content unless needed */
+    overflow-x: hidden;
 }
 
+/* Explicitly hide the default file input */
+#fileInput {
+    display: none !important;
+}
+
+/* Main Container styling */
 .main-container {
-    padding: 1.5rem; /* More generous padding for the main card */
+    padding: 1.5rem; /* Generous padding */
     background-color: var(--card-bg-light);
     border-radius: 0.75rem; /* Rounded corners */
-    box-shadow: 0 6px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* More prominent shadow */
+    box-shadow: 0 6px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Prominent shadow */
     position: relative; /* For theme switch positioning */
     transition: background-color 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
 }
 
-.section-heading {
+/* Section and Card Headings */
+.section-heading, .card-heading {
     color: var(--header-text-color-light);
     border-color: var(--border-color-light);
+    transition: color 0.3s ease, border-color 0.3s ease;
 }
 
+/* Card Styling */
 .card {
     background-color: var(--card-bg-light);
-    padding: 1.25rem; /* More generous padding */
+    padding: 1.25rem; /* Generous padding */
     border: 1px solid var(--border-color-light);
     border-radius: 0.75rem;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08); /* Stronger shadow for cards */
-    margin-bottom: 1.5rem; /* More space between cards */
+    margin-bottom: 1.5rem; /* Space between cards */
     transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-.card-heading {
-    color: var(--header-text-color-light);
-}
-
-/* Action Buttons */
+/* Generic Action Button Styling */
 .action-button {
-    display: flex; /* Make it a flex container for centering content */
+    display: flex; /* Flexbox for icon and text alignment */
     align-items: center;
     justify-content: center;
     padding: 0.75rem 1.75rem; /* Adjusted padding */
-    border-radius: 9999px; /* Fully rounded pill shape */
+    border-radius: 9999px; /* Fully rounded (pill shape) */
     font-weight: 600;
     transition: background-color 0.3s ease, transform 0.1s ease, box-shadow 0.3s ease;
     border: none;
     cursor: pointer;
     font-size: 1rem;
-    line-height: 1.5rem; /* Ensure text sits nicely */
+    line-height: 1.5rem;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* Subtle shadow */
     outline: none; /* Remove default focus outline */
 }
@@ -195,11 +215,11 @@ body {
     box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
 }
 .action-button:focus-visible {
-    /* Custom focus ring for accessibility */
-    box-shadow: 0 0 0 4px var(--focus-ring-color-rgb), 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    /* Custom focus ring for accessibility using CSS variables */
+    box-shadow: 0 0 0 4px rgba(var(--focus-ring-color-rgb), 0.5), 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
-/* Specific button colors */
+/* Specific button colors (light mode) */
 .action-button.primary {
     background-color: var(--primary-button-bg-light);
     color: #fff;
@@ -221,20 +241,20 @@ body {
 .action-button.secondary {
     background-color: var(--secondary-button-bg-light);
     color: #fff; /* White text for better contrast on gray */
-    box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05); /* Lighter shadow for secondary */
-    --focus-ring-color-rgb: rgba(107, 114, 128, 0.5); /* gray-500 with opacity */
+    box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05); /* Lighter shadow */
+    --focus-ring-color-rgb: 107, 114, 128; /* gray-500 RGB */
 }
 .action-button.secondary:hover {
     background-color: var(--secondary-button-hover-bg-light);
 }
 
-/* Form Inputs */
+/* Form Input Styling */
 .form-input {
     border: 1px solid var(--input-border-light);
-    border-radius: 0.5rem; /* Rounded corners for inputs */
-    padding: 0.625rem 1rem; /* Adjusted padding */
+    border-radius: 0.5rem; /* Rounded corners */
+    padding: 0.625rem 1rem;
     width: 100%;
-    background-color: var(--card-bg-light); /* Use card background for consistency */
+    background-color: var(--card-bg-light); /* Consistent with card background */
     color: var(--text-color-light);
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
     -webkit-appearance: none; /* Remove default browser styling */
@@ -247,11 +267,11 @@ body {
     box-shadow: 0 0 0 3px rgba(var(--input-focus-ring-rgb-values-light), 0.3); /* Custom focus ring */
 }
 
-/* File Drop Area */
+/* File Drop Area Styling */
 .drop-area {
     border: 2px dashed var(--drop-area-border-light);
     border-radius: 0.75rem;
-    padding: 2rem; /* More padding */
+    padding: 2rem;
     text-align: center;
     background-color: var(--drop-area-bg-light);
     transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
@@ -269,7 +289,7 @@ body {
 .drop-area p {
     color: var(--drop-area-text-light);
     margin-bottom: 1rem;
-    font-size: 1.125rem; /* Larger text */
+    font-size: 1.125rem;
     font-weight: 500;
 }
 .drop-area:hover p {
@@ -279,9 +299,9 @@ body {
     display: inline-block;
     background-color: var(--primary-button-bg-light);
     color: #fff;
-    padding: 0.85rem 2rem; /* Adjusted padding for prominence */
+    padding: 0.85rem 2rem;
     border-radius: 9999px;
-    font-size: 1.125rem; /* Larger font */
+    font-size: 1.125rem;
     font-weight: 600;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     transition: background-color 0.3s ease, box-shadow 0.3s ease;
@@ -292,19 +312,17 @@ body {
     box-shadow: 0 6px 10px -2px rgba(0, 0, 0, 0.15), 0 3px 6px -2px rgba(0, 0, 0, 0.08);
 }
 
-/* File Status Message */
+/* File Status Message Styling */
 .file-status {
-    padding: 0.875rem 1.25rem; /* Adjusted padding */
-    border-radius: 0.625rem; /* More rounded */
-    font-size: 0.95rem; /* Slightly larger font */
+    padding: 0.875rem 1.25rem;
+    border-radius: 0.625rem;
+    font-size: 0.95rem;
     font-weight: 500;
     line-height: 1.4;
     display: flex;
     align-items: center;
     transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-    /* Specific colors set by JS based on type */
 }
-
 .file-status.message-success {
     background-color: var(--file-status-success-bg-light);
     border: 1px solid var(--file-status-success-border-light);
@@ -313,7 +331,6 @@ body {
 .file-status.message-success #fileStatusIcon {
     color: var(--file-status-success-icon-light);
 }
-
 .file-status.message-error {
     background-color: var(--file-status-error-bg-light);
     border: 1px solid var(--file-status-error-border-light);
@@ -322,7 +339,6 @@ body {
 .file-status.message-error #fileStatusIcon {
     color: var(--file-status-error-icon-light);
 }
-
 .file-status.message-info {
     background-color: var(--file-status-info-bg-light);
     border: 1px solid var(--file-status-info-border-light);
@@ -332,8 +348,7 @@ body {
     color: var(--file-status-info-icon-light);
 }
 
-
-/* Headers List */
+/* Headers List Styling (Badges) */
 .headers-list {
     display: flex;
     flex-wrap: wrap;
@@ -343,8 +358,8 @@ body {
 .headers-list span {
     background-color: var(--header-badge-bg-light);
     color: var(--header-badge-text-light);
-    padding: 0.6rem 1.25rem; /* More padding */
-    border-radius: 9999px; /* Fully rounded */
+    padding: 0.6rem 1.25rem;
+    border-radius: 9999px;
     font-size: 0.95rem;
     font-weight: 500;
     box-shadow: 0 1px 2px rgba(0,0,0,0.05); /* Subtle shadow */
@@ -357,7 +372,7 @@ body {
     background-color: var(--header-badge-hover-bg-light);
 }
 
-/* Checkbox/Radio Labels (Updated) */
+/* Checkbox/Radio Labels (Custom appearance) */
 .checkbox-label, .radio-label {
     display: flex;
     align-items: center;
@@ -365,10 +380,10 @@ body {
     color: var(--text-color-light);
 }
 .checkbox-label input[type="checkbox"], .radio-label input[type="radio"] {
-    height: 1.125rem; /* Slightly larger */
-    width: 1.125rem; /* Slightly larger */
+    height: 1.125rem;
+    width: 1.125rem;
     border: 1px solid var(--input-border-light);
-    border-radius: 0.25rem; /* Rounded corners for checkboxes */
+    border-radius: 0.25rem; /* For checkboxes */
     background-color: var(--card-bg-light);
     transition: background-color 0.2s ease, border-color 0.2s ease;
     -webkit-appearance: none;
@@ -378,7 +393,7 @@ body {
     margin-right: 0.5rem;
 }
 .checkbox-label input[type="checkbox"]:checked, .radio-label input[type="radio"]:checked {
-    background-color: var(--primary-button-bg-light); /* Use primary color */
+    background-color: var(--primary-button-bg-light); /* Use primary color when checked */
     border-color: var(--primary-button-bg-light);
     position: relative;
 }
@@ -410,7 +425,7 @@ body {
     box-shadow: 0 0 0 3px rgba(var(--input-focus-ring-rgb-values-light), 0.3);
 }
 
-/* Message Boxes (general ones, not file-status) */
+/* General Message Boxes (info, success, error) */
 .message-box {
     padding: 0.875rem 1rem;
     border-radius: 0.5rem;
@@ -426,7 +441,6 @@ body {
     margin-right: 0.75rem;
     font-size: 1.1rem;
 }
-
 .message-success {
     background-color: #d1fae5; /* green-100 */
     border-left: 4px solid #10b981; /* green-600 */
@@ -443,10 +457,10 @@ body {
     color: #1e3a8a; /* blue-900 */
 }
 
-/* Loading Spinner */
+/* Loading Spinner Animation */
 .loading-spinner {
     border: 4px solid rgba(0, 0, 0, 0.1);
-    border-left-color: var(--primary-button-bg-light);
+    border-left-color: var(--primary-button-bg-light); /* Uses primary color for spin */
     border-radius: 50%;
     width: 24px;
     height: 24px;
@@ -525,7 +539,7 @@ body {
     display: none;
 }
 
-/* Field Mapping Group Item (Added card styling) */
+/* Field Mapping Group Item */
 .field-mapping-group-item {
     padding: 1rem; /* Slightly less padding than main card */
     margin-bottom: 1rem; /* Space between mapping groups */
@@ -582,6 +596,7 @@ body {
     color: var(--text-color-light);
     margin-bottom: 0.75rem;
 }
+/* Highlight for selected clickable button */
 .selected-button-highlight {
     background-color: var(--selected-button-highlight-bg);
     border-color: var(--selected-button-highlight-border);
@@ -596,12 +611,12 @@ body {
   z-index: 10;
 }
 .theme-switch input {
-  display: none;
+  display: none; /* Hide default checkbox */
 }
 .slider {
   width: 44px;
   height: 24px;
-  background: var(--border-color-light);
+  background: var(--border-color-light); /* Light mode slider background */
   border-radius: 24px;
   cursor: pointer;
   position: relative;
@@ -615,43 +630,36 @@ body {
   left: 2px;
   width: 20px;
   height: 20px;
-  background: var(--text-color-light);
+  background: var(--text-color-light); /* Light mode knob color */
   border-radius: 50%;
   transition: transform 0.3s ease, background 0.3s ease;
 }
+/* When checked (dark mode active) */
 input:checked + .slider {
-    background: var(--primary-button-bg-light);
+    background: var(--primary-button-bg-light); /* Primary color for slider background in light mode */
 }
 input:checked + .slider::before {
   transform: translateX(20px);
-  background: white;
+  background: white; /* White knob when checked */
 }
 
-/* Dark Mode Overrides */
+/* Dark Mode Overrides (apply when body has 'dark' class) */
 body.dark {
     background-color: var(--bg-color-dark);
     color: var(--text-color-dark);
 }
-
 .main-container.dark {
     background-color: var(--card-bg-dark);
     border-color: var(--border-color-dark);
 }
-
-.section-heading.dark {
+.section-heading.dark, .card-heading.dark {
     color: var(--header-text-color-dark);
     border-color: var(--border-color-dark);
 }
-
 .card.dark {
     background-color: var(--card-bg-dark);
     border-color: var(--border-color-dark);
 }
-
-.card-heading.dark {
-    color: var(--header-text-color-dark);
-}
-
 .action-button.primary.dark {
     background-color: var(--primary-button-bg-dark);
     --focus-ring-color-rgb: var(--primary-button-shadow-dark);
@@ -659,7 +667,6 @@ body.dark {
 .action-button.primary.dark:hover {
     background-color: var(--primary-button-hover-bg-dark);
 }
-
 .action-button.emerald.dark {
     background-color: var(--emerald-button-bg-dark);
     --focus-ring-color-rgb: var(--emerald-button-shadow-dark);
@@ -667,16 +674,14 @@ body.dark {
 .action-button.emerald.dark:hover {
     background-color: var(--emerald-button-hover-bg-dark);
 }
-
 .action-button.secondary.dark {
     background-color: var(--secondary-button-bg-dark);
-    color: var(--text-color-dark); /* Light text on dark secondary */
-    --focus-ring-color-rgb: rgba(74, 85, 104, 0.5); /* gray-700 with opacity */
+    color: var(--text-color-dark);
+    --focus-ring-color-rgb: 74, 85, 104; /* gray-700 RGB */
 }
 .action-button.secondary.dark:hover {
     background-color: var(--secondary-button-hover-bg-dark);
 }
-
 .form-input.dark {
     border-color: var(--input-border-dark);
     background-color: var(--card-bg-dark);
@@ -686,7 +691,6 @@ body.dark {
     border-color: var(--input-focus-ring-dark);
     box-shadow: 0 0 0 3px rgba(var(--input-focus-ring-rgb-values-dark), 0.3);
 }
-
 .drop-area.dark {
     border-color: var(--drop-area-border-dark);
     background-color: var(--drop-area-bg-dark);
@@ -707,7 +711,6 @@ body.dark {
 .browse-button.dark:hover {
     background-color: var(--primary-button-hover-bg-dark);
 }
-
 .file-status.message-success.dark {
   background-color: var(--file-status-success-bg-dark);
   border-color: var(--file-status-success-border-dark);
@@ -716,7 +719,6 @@ body.dark {
 .file-status.message-success.dark #fileStatusIcon {
     color: var(--file-status-success-icon-dark);
 }
-
 .file-status.message-error.dark {
   background-color: var(--file-status-error-bg-dark);
   border-color: var(--file-status-error-border-dark);
@@ -725,7 +727,6 @@ body.dark {
 .file-status.message-error.dark #fileStatusIcon {
     color: var(--file-status-error-icon-dark);
 }
-
 .file-status.message-info.dark {
   background-color: var(--file-status-info-bg-dark);
   border-color: var(--file-status-info-border-dark);
@@ -734,7 +735,6 @@ body.dark {
 .file-status.message-info.dark #fileStatusIcon {
     color: var(--file-status-info-icon-dark);
 }
-
 .headers-list.dark span {
     background-color: var(--header-badge-bg-dark);
     color: var(--header-badge-text-dark);
@@ -742,7 +742,6 @@ body.dark {
 .headers-list.dark span:hover {
     background-color: var(--header-badge-hover-bg-dark);
 }
-
 .checkbox-label.dark, .radio-label.dark {
     color: var(--text-color-dark);
 }
@@ -757,7 +756,7 @@ body.dark {
 .checkbox-label.dark input[type="checkbox"]:focus, .radio-label.dark input[type="radio"]:focus {
     box-shadow: 0 0 0 3px rgba(var(--input-focus-ring-rgb-values-dark), 0.3);
 }
-
+/* Dark mode for generic message boxes */
 .message-success.dark {
   background-color: #065f46; /* green-900 */
   border-left-color: #10b981; /* green-600 */
@@ -773,20 +772,18 @@ body.dark {
   border-left-color: #0284c7; /* light-blue-700 */
   color: #e0f2fe; /* blue-100 */
 }
-
 .auto-mapped-badge.learned.dark {
-  background-color: #4c51bf; /* indigo-700 */
-  color: #e0e7ff; /* indigo-100 */
+  background-color: var(--auto-mapped-learned-bg);
+  color: var(--auto-mapped-learned-text);
 }
 .auto-mapped-badge.fuzzy.dark {
-  background-color: #14532d; /* green-900 */
-  color: #dcfce7; /* green-100 */
+  background-color: var(--auto-mapped-fuzzy-bg);
+  color: var(--auto-mapped-fuzzy-text);
 }
 .auto-mapped-badge.unmapped.dark {
-  background-color: #4a5568; /* gray-700 */
-  color: #a0aec0; /* gray-400 */
+  background-color: var(--auto-mapped-unmapped-bg);
+  color: var(--auto-mapped-unmapped-text);
 }
-
 .tab-buttons.dark {
     background-color: var(--tab-button-bg-dark);
 }
@@ -800,32 +797,31 @@ body.dark {
     background-color: var(--tab-button-active-bg-dark);
     color: var(--tab-button-active-text-dark);
 }
-
 #clickableButtonsContainer.dark {
-    border-color: var(--clickable-item-border-dark);
-    background-color: var(--clickable-container-bg-dark);
+    border-color: var(--clickable-item-border);
+    background-color: var(--clickable-container-bg);
 }
 #clickableButtonsContainer.dark > div {
-    border-color: var(--clickable-item-border-dark);
+    border-color: var(--clickable-item-border);
 }
 #clickableButtonsContainer.dark > div:hover {
-    background-color: var(--clickable-item-hover-bg-dark);
+    background-color: var(--clickable-item-hover-bg);
 }
 #clickableButtonsContainer.dark label {
     color: var(--text-color-dark);
 }
 #clickControlSection.dark {
-    border-color: var(--clickable-item-border-dark);
-    background-color: var(--clickable-container-bg-dark);
+    border-color: var(--clickable-item-border);
+    background-color: var(--clickable-container-bg);
 }
 #clickControlSection.dark label {
     color: var(--text-color-dark);
 }
 .selected-button-highlight.dark {
-    background-color: var(--selected-button-highlight-bg-dark);
-    border-color: var(--selected-button-highlight-border-dark);
+    background-color: var(--selected-button-highlight-bg);
+    border-color: var(--selected-button-highlight-border);
 }
-
+/* Dark mode for theme switch slider */
 .theme-switch input:checked + .slider.dark {
     background: var(--primary-button-bg-dark);
 }
@@ -839,7 +835,8 @@ body.dark {
   background: var(--text-color-dark);
 }
 
-/* Responsive adjustments */
+
+/* Responsive adjustments for smaller screens */
 @media (max-width: 480px) {
   .main-container {
     padding: 1rem;

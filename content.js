@@ -4,39 +4,58 @@
  * It listens for messages from the extension's popup and performs DOM manipulations.
  */
 
+// Global flag to ensure message listener is added only once per script execution context
+// This helps prevent stacking listeners if the content script is executed multiple times
+// without the page fully reloading.
+let listenerInitialized = false;
+
 // Global error handler for better debugging in the content script context
 window.onerror = function (msg, url, lineNo, columnNo, error) {
     console.error('Global Error (content.js):', { msg, url, lineNo, columnNo, error });
+    // In a production extension, you might send this error to a background script or a logging service.
 };
 
 // Listen for messages from the popup script
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'scanFields') {
-        const fields = scanForFormFields();
-        sendResponse({ fields: fields });
-        return true; // Keep the message channel open for async response
-    } else if (request.action === 'fillBatch') { // Handle batched filling
-        const { dataBatch, fillEmptyOnly } = request;
-        const result = fillFormFieldsBatch(dataBatch, fillEmptyOnly);
-        sendResponse(result);
-        return true; // Keep the message channel open for async response
-    } else if (request.action === "scanClickables") { // Handle scanClickables
-        const elements = getClickableElements();
-        sendResponse({ clickables: elements });
-        return true; // Keep the message channel open for async response
-    } else if (request.action === "performClick") { // Handle performClick
-        // Call the async function and then send the response
-        clickElementByStableId(request.stableId, request.count).then(result => {
-            sendResponse({
-                status: result.success ? "success" : "error",
-                message: result.message || ""
+// This listener will only be added once due to the listenerInitialized check
+if (!listenerInitialized) {
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        // Handle a 'ping' action to confirm the content script is loaded
+        if (request.action === "ping") {
+            sendResponse({ status: "pong" });
+            return true; // Indicate that the response will be sent asynchronously
+        }
+        else if (request.action === 'scanFields') {
+            const fields = scanForFormFields();
+            sendResponse({ fields: fields });
+            return true; // Keep the message channel open for async response
+        } else if (request.action === 'fillBatch') { // Handle batched filling
+            const { dataBatch, fillEmptyOnly } = request;
+            const result = fillFormFieldsBatch(dataBatch, fillEmptyOnly);
+            sendResponse(result);
+            return true; // Keep the message channel open for async response
+        } else if (request.action === "scanClickables") { // Handle scanClickables
+            const elements = getClickableElements();
+            sendResponse({ clickables: elements });
+            return true; // Keep the message channel open for async response
+        } else if (request.action === "performClick") { // Handle performClick
+            // Call the async function and then send the response
+            clickElementByStableId(request.stableId, request.count).then(result => {
+                sendResponse({
+                    status: result.success ? "success" : "error",
+                    message: result.message || ""
+                });
+            }).catch(error => {
+                console.error("Error in performClick promise chain:", error);
+                sendResponse({ status: "error", message: `Internal error during click: ${error.message}` });
             });
-        });
-        return true; // This is crucial: indicates that sendResponse will be called asynchronously
-    }
-    // Return true to indicate that the response will be sent asynchronously
-    // (already handled above for each specific action that might involve async operations)
-});
+            return true; // This is crucial: indicates that sendResponse will be called asynchronously
+        }
+        // If no action matched, return false or nothing for synchronous handling
+        return false;
+    });
+    listenerInitialized = true; // Set flag to true after listener is added
+}
+
 
 /**
  * Scans the current web page for input fields, textareas, and select elements.
@@ -60,8 +79,8 @@ function scanForFormFields() {
             while (document.getElementById(tempId)) {
                 tempId = `${fieldId}-${counter++}`;
             }
-            element.id = tempId;
-            fieldId = tempId;
+            element.id = tempId; // Assign the unique ID to the DOM element
+            fieldId = tempId; // Use this new unique ID for our field object
         }
 
         let labelText = '';
@@ -107,7 +126,7 @@ function scanForFormFields() {
             let parent = element.parentElement;
             while (parent && parent.tagName !== 'BODY') {
                 // Check for a <label> element that contains the current element
-                const potentialLabel = parent.querySelector(`label:has(#${element.id})`);
+                const potentialLabel = parent.querySelector(`label:has(#${element.id})`); // Using :has() for more accurate containment
                 if (potentialLabel) {
                     labelText = potentialLabel.textContent.trim();
                     break;
@@ -136,7 +155,7 @@ function scanForFormFields() {
                 surroundingText = text + ' ' + surroundingText;
             }
             // Stop if we hit a non-text/label/heading element or a form boundary
-            if (!prevSibling.previousElementSibling || prevSibling.previousElementSibling.tagName === 'FORM') {
+            if (!prevSibling.previousElementSibling || prevSibling.previousElementSibling.tagName === 'FORM' || prevSibling.previousElementSibling.tagName === 'fieldset' || prevSibling.previousElementSibling.tagName === 'SECTION') {
                 break;
             }
             prevSibling = prevSibling.previousElementSibling;
@@ -274,7 +293,7 @@ function fillFormFieldsBatch(dataBatch, fillEmptyOnly) {
 }
 
 /**
- * NEW: Scans the current web page for clickable elements.
+ * Scans the current web page for clickable elements.
  * @returns {Array<Object>} An array of objects, each representing a clickable element.
  */
 function getClickableElements() {
@@ -333,6 +352,7 @@ function getClickableElements() {
         }
         
         // Add a data attribute for easier direct selection in the content script
+        // This ensures a stable way to find the element even if its original ID is dynamically changed
         el.setAttribute("data-auto-click-id", stableId);
 
         return { text: label, stableId: stableId }; // Return the chosen label and stable ID
@@ -340,22 +360,23 @@ function getClickableElements() {
 }
 
 /**
- * NEW: Performs a click on an element identified by its stable ID, with a delay between clicks.
+ * Performs a click on an element identified by its stable ID, with a delay between clicks.
  * @param {string} stableId - The stable ID of the element to click.
  * @param {number} count - The number of times to click the element.
- * @returns {Object} An object indicating success or failure and a message.
+ * @returns {Promise<Object>} A promise that resolves to an object indicating success or failure and a message.
  */
 async function clickElementByStableId(stableId, count) {
-    // Select using the data-auto-click-id attribute
+    // Select using the data-auto-click-id attribute which we assigned
     const target = document.querySelector(`[data-auto-click-id="${stableId}"]`);
     
     if (!target) {
-        return { success: false, message: "Target element not found on the page." };
+        return { success: false, message: "Target element not found on the page. It might have been removed or changed." };
     }
 
     try {
         for (let i = 0; i < count; i++) {
-            target.click(); // Perform the click event
+            target.click(); // Programmatically perform the click event
+            // Introduce a short delay to simulate human interaction and allow DOM to react
             await new Promise(resolve => setTimeout(resolve, 300)); // 300ms delay between clicks
         }
         return { success: true };

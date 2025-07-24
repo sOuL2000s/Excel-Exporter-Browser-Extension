@@ -14,11 +14,11 @@ const autoClickSection = document.getElementById("autoClickSection");
 
 // DOM Elements - Auto Fill Section
 const fileInput = document.getElementById('fileInput');
-const dropArea = document.getElementById('drop-area'); // New: Reference to the drag and drop area
-const fileNameDisplay = document.getElementById('fileNameDisplay'); // Still used for "Drag & Drop..." text
-const fileStatusMessage = document.getElementById('fileStatusMessage'); // New: The combined status div
-const fileMessage = document.getElementById('fileMessage'); // New: Span inside status div for text
-const fileStatusIcon = document.getElementById('fileStatusIcon'); // New: Icon inside status div
+const dropArea = document.getElementById('drop-area'); // Reference to the drag and drop area
+const fileNameDisplay = document.getElementById('fileNameDisplay'); // Used for "Drag & Drop..." text initially, then file name
+const fileStatusMessage = document.getElementById('fileStatusMessage'); // The combined status div
+const fileMessage = document.getElementById('fileMessage'); // Span inside status div for text
+const fileStatusIcon = document.getElementById('fileStatusIcon'); // Icon inside status div
 const dataDisplaySection = document.getElementById('dataDisplaySection');
 const headersDisplay = document.getElementById('headersDisplay');
 const scanFieldsButton = document.getElementById('scanFieldsButton');
@@ -40,7 +40,7 @@ const clickableButtonsContainer = document.getElementById("clickableButtonsConta
 const clickCountInput = document.getElementById("clickCount");
 const startClickingButton = document.getElementById("startClicking");
 const autoClickMessage = document.getElementById("autoClickMessage");
-const selectButtonCard = document.getElementById("selectButtonCard"); // New card for step 2
+const selectButtonCard = document.getElementById("selectButtonCard"); // Card for step 2
 const clickControlSection = document.getElementById("clickControlSection"); // Card for step 3
 
 // DOM Elements - Theme Toggle
@@ -55,35 +55,52 @@ autoClickTab.addEventListener("click", () => switchTab('autoClick'));
 
 // Theme toggle logic
 themeToggle.addEventListener('change', () => {
-  document.body.classList.toggle('dark', themeToggle.checked);
-  // Also toggle dark class on the main container and relevant cards
-  document.querySelector('.main-container').classList.toggle('dark', themeToggle.checked);
-  document.querySelectorAll('.card').forEach(card => card.classList.toggle('dark', themeToggle.checked));
-  document.querySelectorAll('.section-heading').forEach(heading => heading.classList.toggle('dark', themeToggle.checked));
-  document.querySelectorAll('.card-heading').forEach(heading => heading.classList.toggle('dark', themeToggle.checked));
-  document.querySelectorAll('.action-button').forEach(button => button.classList.toggle('dark', themeToggle.checked));
-  document.querySelectorAll('.form-input').forEach(input => input.classList.toggle('dark', themeToggle.checked));
-  document.querySelectorAll('.drop-area').forEach(drop => drop.classList.toggle('dark', themeToggle.checked));
-  document.querySelectorAll('.browse-button').forEach(button => button.classList.toggle('dark', themeToggle.checked));
-  document.querySelectorAll('.file-status').forEach(status => status.classList.toggle('dark', themeToggle.checked));
-  document.querySelectorAll('.headers-list').forEach(list => list.classList.toggle('dark', themeToggle.checked));
-  document.querySelectorAll('.headers-list span').forEach(span => span.classList.toggle('dark', themeToggle.checked));
-  document.querySelectorAll('.checkbox-label').forEach(label => label.classList.toggle('dark', themeToggle.checked));
-  document.querySelectorAll('.radio-label').forEach(label => label.classList.toggle('dark', themeToggle.checked));
-  document.querySelectorAll('.message-box').forEach(box => box.classList.toggle('dark', themeToggle.checked));
-  document.querySelectorAll('.auto-mapped-badge').forEach(badge => badge.classList.toggle('dark', themeToggle.checked));
-  document.querySelectorAll('.tab-buttons').forEach(buttons => buttons.classList.toggle('dark', themeToggle.checked));
-  document.querySelectorAll('.tab-button').forEach(button => button.classList.toggle('dark', themeToggle.checked));
-  document.querySelectorAll('#clickableButtonsContainer').forEach(container => container.classList.toggle('dark', themeToggle.checked));
-  document.querySelectorAll('#clickableButtonsContainer > div').forEach(div => div.classList.toggle('dark', themeToggle.checked));
-  document.querySelectorAll('#clickableButtonsContainer label').forEach(label => label.classList.toggle('dark', themeToggle.checked));
-  document.querySelectorAll('#clickControlSection').forEach(section => section.classList.toggle('dark', themeToggle.checked));
-  document.querySelectorAll('#clickControlSection label').forEach(label => label.classList.toggle('dark', themeToggle.checked));
-  document.querySelectorAll('.selected-button-highlight').forEach(highlight => highlight.classList.toggle('dark', themeToggle.checked));
-  document.querySelectorAll('.slider').forEach(slider => slider.classList.toggle('dark', themeToggle.checked));
+    // Toggle 'dark' class on the body to apply dark mode styles
+    const isDarkMode = themeToggle.checked;
+    document.body.classList.toggle('dark', isDarkMode);
 
+    // Get all elements that need their 'dark' class toggled based on the theme state
+    const elementsToToggle = [
+        document.querySelector('.main-container'),
+        ...document.querySelectorAll('.card'),
+        ...document.querySelectorAll('.section-heading'),
+        ...document.querySelectorAll('.card-heading'),
+        ...document.querySelectorAll('.action-button'),
+        ...document.querySelectorAll('.form-input'),
+        ...document.querySelectorAll('.drop-area'),
+        ...document.querySelectorAll('.browse-button'),
+        ...document.querySelectorAll('.file-status'),
+        ...document.querySelectorAll('.headers-list'),
+        ...document.querySelectorAll('.headers-list span'),
+        ...document.querySelectorAll('.checkbox-label'),
+        ...document.querySelectorAll('.radio-label'),
+        ...document.querySelectorAll('.message-box'),
+        ...document.querySelectorAll('.auto-mapped-badge'),
+        ...document.querySelectorAll('.tab-buttons'),
+        ...document.querySelectorAll('.tab-button'),
+        document.getElementById('clickableButtonsContainer'),
+        ...document.querySelectorAll('#clickableButtonsContainer > div'),
+        ...document.querySelectorAll('#clickableButtonsContainer label'),
+        document.getElementById('clickControlSection'),
+        ...document.querySelectorAll('#clickControlSection label'),
+        ...document.querySelectorAll('.selected-button-highlight'),
+        ...document.querySelectorAll('.slider')
+    ].filter(Boolean); // Filter out nulls if elements aren't always present
 
-  localStorage.setItem('theme', themeToggle.checked ? 'dark' : 'light');
+    elementsToToggle.forEach(el => {
+        el.classList.toggle('dark', isDarkMode);
+        // Special handling for selected-button-highlight on tab switch
+        if (el.classList.contains('selected-button-highlight')) {
+            el.classList.toggle('dark:selected-button-highlight', isDarkMode);
+        }
+        // Special handling for tab buttons active state
+        if (el.classList.contains('tab-button') && el.classList.contains('active')) {
+            el.classList.toggle('dark:active', isDarkMode);
+        }
+    });
+
+    // Store user's theme preference in local storage
+    localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
 });
 
 // File input change
@@ -93,7 +110,8 @@ fileInput.addEventListener('change', handleFile);
 dropArea.addEventListener('dragover', (e) => {
     e.preventDefault();
     dropArea.classList.add('border-blue-600', 'bg-blue-100', 'dark:border-indigo-500', 'dark:bg-indigo-900');
-    fileNameDisplay.classList.add('group-hover:text-blue-700', 'dark:group-hover:text-blue-300'); // Add hover text color
+    // Add hover text color effects only when dragging over
+    fileNameDisplay.classList.add('group-hover:text-blue-700', 'dark:group-hover:text-blue-300'); 
 });
 dropArea.addEventListener('dragleave', (e) => {
     e.preventDefault();
@@ -127,6 +145,20 @@ testFillButton.addEventListener('click', () => testFillFirstRow());
 // Preview Values button click
 previewValuesButton.addEventListener('click', () => previewMappedValues());
 
+// Helper to check if content script is already loaded and responsive
+async function isContentScriptLoaded(tabId) {
+    try {
+        // Send a dummy message to content.js and expect a 'pong' response
+        const response = await chrome.tabs.sendMessage(tabId, { action: "ping" });
+        return response && response.status === "pong";
+    } catch (e) {
+        // If an error occurs (e.g., recipient disconnected, script not injected),
+        // it means the content script is not loaded or not responding.
+        return false;
+    }
+}
+
+
 // Auto Click Event Listeners
 scanButtons.addEventListener("click", async () => {
     displayFileStatusMessage('<i class="fas fa-spinner fa-spin"></i>Scanning for clickable buttons...', 'info', autoClickMessage, true);
@@ -141,19 +173,24 @@ scanButtons.addEventListener("click", async () => {
             return;
         }
 
-        const response = await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            files: ['content.js']
-        }).then(() => {
-            return chrome.tabs.sendMessage(tab.id, { action: "scanClickables" });
-        });
+        // Ensure content.js is injected only once per tab
+        const loaded = await isContentScriptLoaded(tab.id);
+        if (!loaded) {
+            await chrome.scripting.executeScript({
+                target: { tabId: tab.id },
+                files: ['content.js']
+            });
+        }
+
+        // Now that content.js is guaranteed to be loaded, send the actual scan message
+        const response = await chrome.tabs.sendMessage(tab.id, { action: "scanClickables" });
 
         if (response && response.clickables) {
             if (response.clickables.length > 0) {
                 clickableButtonsContainer.innerHTML = ''; // Clear scanning message
                 response.clickables.forEach((btn, index) => {
                     const btnDiv = document.createElement("div");
-                    btnDiv.className = "flex items-center mb-1 last:mb-0 border-b border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors duration-200 p-2"; // Add styling classes
+                    btnDiv.className = "flex items-center mb-1 last:mb-0 border-b border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors duration-200 p-2";
                     btnDiv.innerHTML = `
                         <input type="radio" name="clickable" value="${btn.stableId}" id="btn-${index}" class="mr-2 flex-shrink-0">
                         <label for="btn-${index}" class="text-sm text-gray-700 dark:text-gray-300 flex-grow">${btn.text}</label>
@@ -162,11 +199,18 @@ scanButtons.addEventListener("click", async () => {
 
                     // Add event listener to highlight selected radio button
                     btnDiv.querySelector('input[type="radio"]').addEventListener('change', (e) => {
+                        // Remove highlight from all other buttons
                         document.querySelectorAll('#clickableButtonsContainer > div').forEach(div => {
-                            div.classList.remove('selected-button-highlight', 'dark:selected-button-highlight');
+                            div.classList.remove('selected-button-highlight');
+                            // Ensure dark mode highlight is also removed/added correctly
+                            div.classList.remove('dark:selected-button-highlight'); 
                         });
+                        // Add highlight to the newly selected button's parent div
                         if (e.target.checked) {
-                            btnDiv.classList.add('selected-button-highlight', document.body.classList.contains('dark') ? 'dark:selected-button-highlight' : '');
+                            btnDiv.classList.add('selected-button-highlight');
+                            if (document.body.classList.contains('dark')) {
+                                btnDiv.classList.add('dark:selected-button-highlight');
+                            }
                         }
                     });
                 });
@@ -183,11 +227,11 @@ scanButtons.addEventListener("click", async () => {
             clickableButtonsContainer.innerHTML = "<p class='text-gray-500 dark:text-gray-400 text-sm p-2'>Failed to scan for buttons.</p>";
             selectButtonCard.classList.add("hidden");
             clickControlSection.classList.add("hidden");
-            displayFileStatusMessage('<i class="fas fa-exclamation-triangle"></i>Failed to get clickable elements from the current tab.', 'error', autoClickMessage, true);
+            displayFileStatusMessage('<i class="fas fa-exclamation-triangle"></i>Failed to get clickable elements from the current tab. Ensure content script can run.', 'error', autoClickMessage, true);
         }
     } catch (error) {
         console.error("Error scanning buttons:", error);
-        displayFileStatusMessage(`<i class="fas fa-exclamation-triangle"></i>Error scanning buttons: ${error.message}.`, 'error', autoClickMessage, true);
+        displayFileStatusMessage(`<i class="fas fa-exclamation-triangle"></i>Error scanning buttons: ${error.message}. Check console for details.`, 'error', autoClickMessage, true);
         clickableButtonsContainer.innerHTML = "<p class='text-gray-500 dark:text-gray-400 text-sm p-2'>Error scanning for buttons. Check console for details.</p>";
         selectButtonCard.classList.add("hidden");
         clickControlSection.classList.add("hidden");
@@ -224,6 +268,7 @@ startClickingButton.addEventListener("click", async () => {
             return;
         }
 
+        // Send message to content script to perform the clicks
         const response = await chrome.tabs.sendMessage(tab.id, {
             action: "performClick",
             stableId,
@@ -249,37 +294,14 @@ startClickingButton.addEventListener("click", async () => {
 document.addEventListener('DOMContentLoaded', () => {
     loadLearnedMappings();
     loadTabPreference();
-    // Load theme preference on DOMContentLoaded
+    // Load theme preference on DOMContentLoaded and apply it immediately
     const theme = localStorage.getItem('theme');
     if (theme === 'dark') {
-      document.body.classList.add('dark');
-      // Apply dark class to other elements as well for initial load
-      document.querySelector('.main-container').classList.add('dark');
-      document.querySelectorAll('.card').forEach(card => card.classList.add('dark'));
-      document.querySelectorAll('.section-heading').forEach(heading => heading.classList.add('dark'));
-      document.querySelectorAll('.card-heading').forEach(heading => heading.classList.add('dark'));
-      document.querySelectorAll('.action-button').forEach(button => button.classList.add('dark'));
-      document.querySelectorAll('.form-input').forEach(input => input.classList.add('dark'));
-      document.querySelectorAll('.drop-area').forEach(drop => drop.classList.add('dark'));
-      document.querySelectorAll('.browse-button').forEach(button => button.classList.add('dark'));
-      document.querySelectorAll('.file-status').forEach(status => status.classList.add('dark'));
-      document.querySelectorAll('.headers-list').forEach(list => list.classList.add('dark'));
-      document.querySelectorAll('.headers-list span').forEach(span => span.classList.add('dark'));
-      document.querySelectorAll('.checkbox-label').forEach(label => label.classList.add('dark'));
-      document.querySelectorAll('.radio-label').forEach(label => label.classList.add('dark'));
-      document.querySelectorAll('.message-box').forEach(box => box.classList.add('dark'));
-      document.querySelectorAll('.auto-mapped-badge').forEach(badge => badge.classList.add('dark'));
-      document.querySelectorAll('.tab-buttons').forEach(buttons => buttons.classList.add('dark'));
-      document.querySelectorAll('.tab-button').forEach(button => button.classList.add('dark'));
-      document.querySelectorAll('#clickableButtonsContainer').forEach(container => container.classList.add('dark'));
-      document.querySelectorAll('#clickableButtonsContainer > div').forEach(div => div.classList.add('dark'));
-      document.querySelectorAll('#clickableButtonsContainer label').forEach(label => label.classList.add('dark'));
-      document.querySelectorAll('#clickControlSection').forEach(section => section.classList.add('dark'));
-      document.querySelectorAll('#clickControlSection label').forEach(label => label.classList.add('dark'));
-      document.querySelectorAll('.selected-button-highlight').forEach(highlight => highlight.classList.add('dark'));
-      document.querySelectorAll('.slider').forEach(slider => slider.classList.add('dark'));
-      themeToggle.checked = true;
+      themeToggle.checked = true; // Set the toggle to checked state
     }
+    // Manually trigger the change event to apply the theme classes on initial load
+    // This ensures all dynamically added elements (like file status, mapping groups) also get the correct theme
+    themeToggle.dispatchEvent(new Event('change'));
 });
 
 
@@ -296,6 +318,7 @@ async function switchTab(activeTabId) {
     
     const targetTabButton = document.getElementById(`${activeTabId}Tab`);
     targetTabButton.classList.add('active');
+    // Ensure dark mode active class is applied if current theme is dark
     if (document.body.classList.contains('dark')) {
         targetTabButton.classList.add('dark:active');
     }
@@ -305,7 +328,7 @@ async function switchTab(activeTabId) {
     autoClickSection.classList.add('hidden');
     document.getElementById(`${activeTabId}Section`).classList.remove('hidden');
 
-    // Save tab preference
+    // Save tab preference to chrome.storage.sync
     try {
         await chrome.storage.sync.set({ activeTab: activeTabId });
     } catch (error) {
@@ -323,7 +346,7 @@ async function loadTabPreference() {
         switchTab(lastActiveTab);
     } catch (error) {
         console.error('Error loading tab preference:', error);
-        switchTab('autoFill'); // Fallback to default
+        switchTab('autoFill'); // Fallback to default in case of error
     }
 }
 
@@ -346,7 +369,7 @@ function handleFile() {
     reader.onload = function(e) {
         try {
             const data = new Uint8Array(e.target.result);
-            // Read the workbook
+            // Read the workbook using SheetJS
             workbook = XLSX.read(data, { type: 'array' });
 
             // Get the first sheet name
@@ -364,7 +387,7 @@ function handleFile() {
             // The first row is the headers
             headers = sheetData[0];
             
-            displayHeaders(headers);
+            displayHeaders(headers); // Update UI with headers
             dataDisplaySection.classList.remove('hidden');
             displayFileStatusMessage(`<i class="fas fa-check-circle"></i>File "${file.name}" loaded successfully.`, 'success', fileStatusMessage, true);
 
@@ -406,7 +429,8 @@ function displayHeaders(headersArray) {
     if (headersArray.length > 0) {
         headersArray.forEach(header => {
             const span = document.createElement('span');
-            span.className = 'bg-indigo-100 text-indigo-800 px-5 py-2 rounded-full text-base font-medium shadow-sm flex items-center transition-colors duration-200 hover:bg-indigo-200 cursor-default dark:bg-indigo-700 dark:text-indigo-100 dark:hover:bg-indigo-600';
+            // Apply theme classes based on current body theme
+            span.className = `px-5 py-2 rounded-full text-base font-medium shadow-sm flex items-center transition-colors duration-200 cursor-default ${document.body.classList.contains('dark') ? 'bg-indigo-700 text-indigo-100 hover:bg-indigo-600' : 'bg-indigo-100 text-indigo-800 hover:bg-indigo-200'}`;
             span.textContent = header;
             headersDisplay.appendChild(span);
         });
@@ -438,14 +462,17 @@ async function scanCurrentTabFields() {
             return;
         }
 
-        // Inject content script if not already injected and send message to scan
-        const response = await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            files: ['content.js'] // Inject content.js
-        }).then(() => {
-            // Once injected, send a message to the content script to perform the scan
-            return chrome.tabs.sendMessage(tab.id, { action: 'scanFields' });
-        });
+        // Ensure content.js is injected only once per tab
+        const loaded = await isContentScriptLoaded(tab.id);
+        if (!loaded) {
+            await chrome.scripting.executeScript({
+                target: { tabId: tab.id },
+                files: ['content.js']
+            });
+        }
+
+        // Now that content.js is guaranteed to be loaded, send the actual scan message
+        const response = await chrome.tabs.sendMessage(tab.id, { action: 'scanFields' });
 
         if (response && response.fields) {
             availableFormFields = response.fields;
@@ -463,7 +490,7 @@ async function scanCurrentTabFields() {
             }
         } else {
             fieldMappingSection.classList.add('hidden');
-            displayMessage(scanMessage, '<i class="fas fa-exclamation-triangle mr-2"></i>Failed to get fields from the current tab.', 'error', true);
+            displayMessage(scanMessage, '<i class="fas fa-exclamation-triangle mr-2"></i>Failed to get fields from the current tab. Ensure content script can run.', 'error', true);
             oneClickAutofillButton.classList.add('hidden'); // Hide autofill button if error
         }
     } catch (error) {
@@ -492,10 +519,11 @@ function generateFieldSignature(field) {
         field.title,
         field.autocomplete,
         field.surroundingText
-    ].filter(Boolean)
-     .map(str => str.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim())
-     .filter(str => str.length > 1);
+    ].filter(Boolean) // Filter out empty strings/nulls/undefineds
+     .map(str => str.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim()) // Clean and normalize strings
+     .filter(str => str.length > 1); // Only include parts longer than 1 character
 
+    // Use a Set to ensure unique parts and then join them
     return [...new Set(parts)].join(" | ");
 }
 
@@ -508,7 +536,8 @@ function groupFieldsBySignature(formFields) {
     const groups = {};
     formFields.forEach(field => {
         const signature = generateFieldSignature(field);
-        const groupIdentifier = signature || field.htmlId || 'Unnamed Field Group';
+        // Fallback to htmlId if signature is empty, otherwise a generic label
+        const groupIdentifier = signature || field.htmlId || `Unnamed Field Group (${field.type})`;
         
         if (!groups[groupIdentifier]) {
             groups[groupIdentifier] = [];
@@ -532,38 +561,32 @@ function setupFieldMapping(groupedFields, headersArray) {
         mappingContainer.classList.add('text-gray-500', 'dark:text-gray-400', 'text-sm');
         return;
     }
+    // Remove informational text if there are groups to display
     mappingContainer.classList.remove('text-gray-500', 'dark:text-gray-400', 'text-sm');
 
     groupKeys.forEach(contextKey => {
         const fieldsInGroup = groupedFields[contextKey];
         const mappingGroupItem = document.createElement('div');
-        mappingGroupItem.className = 'field-mapping-group-item card'; // Apply card styling
-        if (document.body.classList.contains('dark')) {
-            mappingGroupItem.classList.add('dark');
-        }
-
+        // Apply card styling and theme class
+        mappingGroupItem.className = `field-mapping-group-item card ${document.body.classList.contains('dark') ? 'dark' : ''}`;
+        
         const groupHeader = document.createElement('h3');
-        groupHeader.className = 'text-md font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center card-heading';
+        groupHeader.className = `text-md font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center card-heading ${document.body.classList.contains('dark') ? 'dark' : ''}`;
         groupHeader.textContent = contextKey;
-        if (document.body.classList.contains('dark')) {
-            groupHeader.classList.add('dark');
-        }
         mappingGroupItem.appendChild(groupHeader);
 
         const groupControl = document.createElement('div');
         groupControl.className = 'flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 mb-3';
 
         const label = document.createElement('label');
-        label.className = 'checkbox-label flex-shrink-0';
-        if (document.body.classList.contains('dark')) {
-            label.classList.add('dark');
-        }
-
+        // Apply theme class to label
+        label.className = `checkbox-label flex-shrink-0 ${document.body.classList.contains('dark') ? 'dark' : ''}`;
+        
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.className = 'group-checkbox mr-2';
         checkbox.dataset.contextKey = contextKey;
-        checkbox.checked = false;
+        checkbox.checked = false; // Initially unchecked
 
         const span = document.createElement('span');
         span.className = 'text-sm text-gray-700 dark:text-gray-300';
@@ -574,12 +597,10 @@ function setupFieldMapping(groupedFields, headersArray) {
         groupControl.appendChild(label);
 
         const select = document.createElement('select');
-        select.className = 'group-mapper flex-grow mt-2 sm:mt-0 form-input'; // Use form-input for styling
+        // Apply form-input and theme class to select
+        select.className = `group-mapper flex-grow mt-2 sm:mt-0 form-input ${document.body.classList.contains('dark') ? 'dark' : ''}`;
         select.dataset.contextKey = contextKey;
-        select.disabled = true;
-        if (document.body.classList.contains('dark')) {
-            select.classList.add('dark');
-        }
+        select.disabled = true; // Initially disabled
 
         const fragment = document.createDocumentFragment();
         const defaultOption = document.createElement('option');
@@ -597,20 +618,21 @@ function setupFieldMapping(groupedFields, headersArray) {
         groupControl.appendChild(select);
         mappingGroupItem.appendChild(groupControl);
 
-        // Display individual fields within this group (read-only)
+        // Display individual fields within this group (read-only for user information)
         const fieldListContainer = document.createElement('div');
         fieldListContainer.className = 'mt-2 text-xs text-gray-600 dark:text-gray-400';
         fieldListContainer.innerHTML = '<p class="font-medium mb-1">Instances of this field on page:</p>';
         fieldsInGroup.forEach(field => {
+            // Generate a user-friendly display name for the field instance
             let displayName = field.labelText || field.name || field.placeholder || field.ariaLabel || field.title || 'Unnamed Field Instance';
-            displayName = displayName.replace(/\[\d+\]/g, '').trim();
-
+            displayName = displayName.replace(/\[\d+\]/g, '').trim(); // Clean array-like indexing
             if (displayName.startsWith('stable-id-') || displayName.startsWith('generated-id-')) {
-                displayName = 'Unnamed Field Instance';
+                displayName = 'Unnamed Field Instance'; // Generic label for programmatically generated IDs
             }
 
             const fieldSpan = document.createElement('span');
-            fieldSpan.className = 'inline-block bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full mr-1 mb-1 dark:bg-gray-700 dark:text-gray-300';
+            // Apply theme classes for the field instance badges
+            fieldSpan.className = `inline-block px-2 py-0.5 rounded-full mr-1 mb-1 ${document.body.classList.contains('dark') ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`;
             fieldSpan.textContent = displayName;
             fieldListContainer.appendChild(fieldSpan);
         });
@@ -618,23 +640,29 @@ function setupFieldMapping(groupedFields, headersArray) {
 
         mappingContainer.appendChild(mappingGroupItem);
 
-        // Event listener for group checkbox
+        // Event listener for group checkbox: enables/disables the select dropdown
         checkbox.addEventListener('change', (e) => {
             const currentSelect = mappingContainer.querySelector(`.group-mapper[data-context-key="${e.target.dataset.contextKey}"]`);
             currentSelect.disabled = !e.target.checked;
             if (!e.target.checked) {
-                currentSelect.value = '';
-                removeAutoMappedBadge(groupHeader); // Remove badge if unchecked
+                currentSelect.value = ''; // Reset selection if unchecked
+                removeAutoMappedBadge(groupHeader); // Remove badge when unchecked
             } else {
-                // If re-checked, try auto-mapping again for visual consistency
-                autoMapFields(groupedFields, headersArray);
+                // If re-checked, try auto-mapping again for visual consistency (e.g., if user changed it manually and then re-enabled)
+                autoMapFields(groupedFields, headersArray); 
             }
         });
 
         // Event listener for select change to save mapping and update badge
         select.addEventListener('change', () => {
-            saveLearnedMappings(); // Save whenever a mapping is changed
-            updateBadgeForGroup(groupHeader, select.value, learnedMappings[contextKey]);
+            saveLearnedMappings(); // Save whenever a mapping is changed by the user
+            // Update badge based on current selection, assuming it's a manual selection if changed here
+            const selectedHeader = select.value;
+            if (selectedHeader) {
+                updateBadgeForGroup(groupHeader, 'learned', ''); // Indicate it's now a learned mapping
+            } else {
+                removeAutoMappedBadge(groupHeader); // Remove badge if selection is cleared
+            }
         });
     });
 }
@@ -645,62 +673,68 @@ function setupFieldMapping(groupedFields, headersArray) {
  * @param {Object} groupedFields - Object of grouped fields.
  * @param {string[]} headersArray - Array of header strings.
  */
-function autoMapFields(groupedFields, headersArray) {
-    // Load learned mappings first
-    loadLearnedMappings().then(() => {
-        const fuseOptions = {
-            includeScore: true,
-            threshold: 0.4, // Lower is stricter, 0.4 allows for some flexibility
-            keys: ['header']
-        };
+async function autoMapFields(groupedFields, headersArray) {
+    await loadLearnedMappings(); // Ensure learned mappings are loaded first
 
-        const fuse = new Fuse(headersArray.map(h => ({ header: h })), fuseOptions);
+    // Guard against empty headers array for Fuse.js initialization
+    if (!headersArray || headersArray.length === 0) {
+        console.warn("Headers array is empty, cannot perform auto-mapping.");
+        displayMessage(scanMessage, '<i class="fas fa-info-circle mr-2"></i>Cannot auto-map: No headers found in the uploaded file.', 'info', true);
+        return;
+    }
 
-        let autoMappedCount = 0;
-        Object.keys(groupedFields).forEach(contextKey => {
-            const checkbox = mappingContainer.querySelector(`.group-checkbox[data-context-key="${contextKey}"]`);
-            const select = mappingContainer.querySelector(`.group-mapper[data-context-key="${contextKey}"]`);
-            const groupHeaderElement = checkbox.closest('.field-mapping-group-item').querySelector('h3');
+    const fuseOptions = {
+        includeScore: true,
+        threshold: 0.4, // Lower is stricter, 0.4 allows for some flexibility
+        keys: ['header'] // Fuse will search within the 'header' property of our items
+    };
 
-            if (!checkbox || !select) return;
+    // Prepare headers for Fuse.js search
+    const fuse = new Fuse(headersArray.map(h => ({ header: h })), fuseOptions);
 
-            let mappedType = 'unmapped'; // Default to unmapped
+    let autoMappedCount = 0;
+    Object.keys(groupedFields).forEach(contextKey => {
+        const checkbox = mappingContainer.querySelector(`.group-checkbox[data-context-key="${contextKey}"]`);
+        const select = mappingContainer.querySelector(`.group-mapper[data-context-key="${contextKey}"]`);
+        const groupHeaderElement = checkbox.closest('.field-mapping-group-item').querySelector('h3');
 
-            // 1. Try to apply learned mapping first
-            if (learnedMappings[contextKey] && headersArray.includes(learnedMappings[contextKey])) {
+        if (!checkbox || !select) return; // Skip if elements not found
+
+        let mappedType = 'unmapped'; // Default mapping type
+
+        // 1. Prioritize applying a previously learned mapping
+        if (learnedMappings[contextKey] && headersArray.includes(learnedMappings[contextKey])) {
+            checkbox.checked = true;
+            select.disabled = false;
+            select.value = learnedMappings[contextKey];
+            mappedType = 'learned';
+            autoMappedCount++;
+            console.log(`Auto-mapping (Learned): "${contextKey}" -> "${learnedMappings[contextKey]}"`);
+        } else {
+            // 2. Fallback to fuzzy matching if no learned mapping or learned mapping is no longer valid (e.g., header changed)
+            const result = fuse.search(contextKey)[0]; // Get the best fuzzy match
+            if (result && result.score < 0.4) { // Apply if confidence (score) is high enough
+                const bestMatchHeader = result.item.header;
                 checkbox.checked = true;
                 select.disabled = false;
-                select.value = learnedMappings[contextKey];
-                mappedType = 'learned';
+                select.value = bestMatchHeader;
+                mappedType = 'fuzzy';
                 autoMappedCount++;
-                console.log(`Auto-mapping (Learned): "${contextKey}" -> "${learnedMappings[contextKey]}"`);
+                console.log(`Auto-mapping (Fuzzy): "${contextKey}" -> "${bestMatchHeader}" (Score: ${result.score.toFixed(2)})`);
             } else {
-                // 2. Fallback to fuzzy matching if no learned mapping or learned mapping no longer valid
-                const result = fuse.search(contextKey)[0];
-                if (result && result.score < 0.4) { // Confidence threshold
-                    const bestMatchHeader = result.item.header;
-                    checkbox.checked = true;
-                    select.disabled = false;
-                    select.value = bestMatchHeader;
-                    mappedType = 'fuzzy';
-                    autoMappedCount++;
-                    console.log(`Auto-mapping (Fuzzy): "${contextKey}" -> "${bestMatchHeader}" (Score: ${result.score.toFixed(2)})`);
-                } else {
-                    // If not auto-mapped, ensure it's unchecked and disabled
-                    checkbox.checked = false;
-                    select.disabled = true;
-                    select.value = '';
-                    mappedType = 'unmapped';
-                    console.log(`No strong auto-mapping for "${contextKey}" (Best score: ${result?.score.toFixed(2) || 'N/A'})`);
-                }
+                // If no auto-mapping, ensure checkbox is unchecked and select is disabled and reset
+                checkbox.checked = false;
+                select.disabled = true;
+                select.value = '';
+                mappedType = 'unmapped';
+                console.log(`No strong auto-mapping for "${contextKey}" (Best score: ${result?.score.toFixed(2) || 'N/A'})`);
             }
-            updateBadgeForGroup(groupHeaderElement, mappedType, mappedType === 'fuzzy' ? result.score.toFixed(2) : '');
-        });
-        displayMessage(scanMessage, `<i class="fas fa-check-circle mr-2"></i>Auto-mapping complete. ${autoMappedCount} fields auto-mapped. Review and adjust if needed.`, 'success', true);
-    }).catch(error => {
-        console.error("Error loading learned mappings for auto-map:", error);
-        displayMessage(scanMessage, `<i class="fas fa-exclamation-triangle mr-2"></i>Error loading learned mappings: ${error.message}. Auto-mapping proceeded without them.`, 'error', true);
+        }
+        // Update the visual badge for the group based on the mapping type
+        updateBadgeForGroup(groupHeaderElement, mappedType, mappedType === 'fuzzy' ? result.score.toFixed(2) : '');
     });
+    // Display overall auto-mapping success message
+    displayMessage(scanMessage, `<i class="fas fa-check-circle mr-2"></i>Auto-mapping complete. ${autoMappedCount} fields auto-mapped. Review and adjust if needed.`, 'success', true);
 }
 
 /**
@@ -717,11 +751,14 @@ function updateBadgeForGroup(groupHeaderElement, type, scoreText = '') {
         groupHeaderElement.appendChild(badge);
     }
     
-    // Remove previous type classes
+    // Remove all type classes first to ensure only the current one is applied
     badge.classList.remove('learned', 'fuzzy', 'unmapped');
+    // Add the current type class
     badge.classList.add(type);
+
+    // Apply dark mode class to the badge if the body is in dark mode
     if (document.body.classList.contains('dark')) {
-        badge.classList.add('dark'); // Ensure dark mode class is applied to badge
+        badge.classList.add('dark');
     } else {
         badge.classList.remove('dark');
     }
@@ -731,13 +768,14 @@ function updateBadgeForGroup(groupHeaderElement, type, scoreText = '') {
         badgeText = 'Auto-Matched (Learned)';
     } else if (type === 'fuzzy') {
         badgeText = `Auto-Matched (Score: ${scoreText})`;
-    } else {
+    } else { // 'unmapped'
         badgeText = 'Unmapped';
     }
     badge.textContent = badgeText;
 
-    // Hide badge if unmapped or no selection
-    if (type === 'unmapped' || !groupHeaderElement.parentElement.querySelector('.group-mapper').value) {
+    // Hide badge if unmapped or no selection in the dropdown
+    const selectElement = groupHeaderElement.parentElement.querySelector('.group-mapper');
+    if (type === 'unmapped' || (selectElement && !selectElement.value)) {
         badge.classList.add('hidden');
     } else {
         badge.classList.remove('hidden');
@@ -751,7 +789,7 @@ function updateBadgeForGroup(groupHeaderElement, type, scoreText = '') {
 function removeAutoMappedBadge(groupHeaderElement) {
     const badge = groupHeaderElement.querySelector('.auto-mapped-badge');
     if (badge) {
-        badge.classList.add('hidden');
+        badge.classList.add('hidden'); // Simply hide it
     }
 }
 
@@ -765,7 +803,7 @@ async function saveLearnedMappings() {
         const selectElement = mappingContainer.querySelector(`.group-mapper[data-context-key="${contextKey}"]`);
         const mappedColumnHeader = selectElement ? selectElement.value : '';
         if (mappedColumnHeader) {
-            currentMappings[contextKey] = selectElement.value;
+            currentMappings[contextKey] = mappedColumnHeader;
         }
     });
 
@@ -774,7 +812,7 @@ async function saveLearnedMappings() {
         console.log('Learned mappings saved:', currentMappings);
         // After saving, re-run autoMapFields to update badges based on newly learned mappings
         if (Object.keys(groupedFormFields).length > 0 && headers.length > 0) {
-            autoMapFields(groupedFormFields, headers);
+            autoMapFields(groupedFormFields, headers); // This will update "learned" badges
         }
     } catch (error) {
         console.error('Error saving learned mappings:', error);
@@ -797,7 +835,7 @@ async function loadLearnedMappings() {
 /**
  * Sends a message to the content script to fill the fields on the active tab.
  * This function now iterates through spreadsheet rows and prepares a batch for filling.
- * @param {boolean} isAutoFill - True if triggered by the "One-Click Autofill" button.
+ * @param {boolean} isAutoFill - True if triggered by the "One-Click Autofill" button (implies auto-mapping first).
  */
 async function fillDataInTab(isAutoFill = false) {
     if (!workbook || sheetData.length <= 1) { // sheetData includes headers, so >1 means actual data rows
@@ -807,6 +845,16 @@ async function fillDataInTab(isAutoFill = false) {
     if (Object.keys(groupedFormFields).length === 0) {
         displayMessage(fillDataMessage, '<i class="fas fa-exclamation-triangle mr-2"></i>Please scan for fields on the current tab first.', 'error', true);
         return;
+    }
+
+    // If triggered by "One-Click Autofill", perform scan and auto-map first
+    if (isAutoFill) {
+        displayMessage(fillDataMessage, '<i class="fas fa-spinner fa-spin mr-2"></i>Performing One-Click Autofill (scanning and auto-mapping)...', 'info', true);
+        await scanCurrentTabFields(); // This will also call autoMapFields internally
+        if (Object.keys(groupedFormFields).length === 0) {
+            displayMessage(fillDataMessage, '<i class="fas fa-exclamation-triangle mr-2"></i>One-Click Autofill failed: No fields found after scan.', 'error', true);
+            return;
+        }
     }
 
     const actualDataRows = sheetData.slice(1); // Get data rows, excluding headers
@@ -830,6 +878,7 @@ async function fillDataInTab(isAutoFill = false) {
     }
 
     displayMessage(fillDataMessage, '<i class="fas fa-spinner fa-spin mr-2"></i>Preparing data for filling...', 'info', true);
+    // Disable buttons to prevent multiple submissions
     fillDataButton.disabled = true;
     fillDataButton.innerHTML = 'Filling... <span class="loading-spinner"></span>';
     oneClickAutofillButton.disabled = true;
@@ -856,42 +905,45 @@ async function fillDataInTab(isAutoFill = false) {
                 if (columnIndex !== -1) {
                     // Get all field instances for this group
                     const fieldsInThisGroup = groupedFormFields[contextKey];
-                    // Assuming sequential filling for now: target the Nth instance for the Nth spreadsheet row
+                    // IMPORTANT: Assuming sequential filling. Target the Nth instance for the Nth spreadsheet row.
+                    // If a form has multiple instances of the same field group, this fills them in order.
                     const targetField = fieldsInThisGroup[rowIndex]; 
 
                     if (targetField) {
                         const value = spreadsheetRow[columnIndex];
-                        // Ensure value is a string for form filling
+                        // Ensure value is converted to a string for form filling consistency
                         dataBatch.push({
                             id: targetField.id,
                             value: (value !== undefined && value !== null) ? String(value) : ''
                         });
                     } else {
+                        // Log a warning if a corresponding form field instance isn't found for a spreadsheet row
                         console.warn(`No form field instance found for group "${contextKey}" at form row index ${rowIndex}. This spreadsheet row might not have a corresponding form field instance.`);
                     }
                 } else {
+                    // Log a warning if a mapped column header is not found in the spreadsheet headers
                     console.warn(`Mapped column "${mappedColumnHeader}" not found in headers for group "${contextKey}". Skipping.`);
                 }
             }
         });
 
         if (dataBatch.length === 0) {
-            displayMessage(fillDataMessage, '<i class="fas fa-info-circle mr-2"></i>No data prepared for filling based on current mappings and spreadsheet data.', 'info', true);
+            displayMessage(fillDataMessage, '<i class="fas fa-info-circle mr-2"></i>No data prepared for filling based on current mappings and spreadsheet data. Check your mappings and file content.', 'info', true);
             return;
         }
 
         displayMessage(fillDataMessage, `<i class="fas fa-paper-plane mr-2"></i>Sending ${dataBatch.length} fields for filling...`, 'info', true);
 
-        // Send the entire batch to the content script
+        // Send the entire prepared batch to the content script for filling
         const response = await chrome.tabs.sendMessage(tab.id, {
             action: 'fillBatch',
-            dataBatch: dataBatch, // Send the array of {id, value} pairs
+            dataBatch: dataBatch, // Array of {id, value} pairs
             fillEmptyOnly: fillEmptyOnly
         });
 
         if (response && response.status === 'success') {
             displayMessage(fillDataMessage, `<i class="fas fa-check-circle mr-2"></i>Data filling complete! ${response.filledCount} fields filled, ${response.skippedCount} fields skipped.`, 'success', true);
-            saveLearnedMappings(); // Save successful mappings
+            saveLearnedMappings(); // Save successful mappings for future use
         } else {
             console.error(`Error filling data: ${response?.message || 'Unknown error.'}`);
             displayMessage(fillDataMessage, `<i class="fas fa-exclamation-triangle mr-2"></i>Error filling data: ${response?.message || 'Unknown error.'}`, "error", true);
@@ -901,6 +953,7 @@ async function fillDataInTab(isAutoFill = false) {
         console.error("Error filling data:", error);
         displayMessage(fillDataMessage, `<i class="fas fa-exclamation-triangle mr-2"></i>Error filling data: ${error.message}.`, 'error', true);
     } finally {
+        // Re-enable buttons regardless of success or failure
         fillDataButton.disabled = false;
         fillDataButton.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Fill Data';
         oneClickAutofillButton.disabled = false;
@@ -925,7 +978,7 @@ async function testFillFirstRow() {
 
     const firstDataRow = sheetData[1]; // Get the first data row (index 1 after headers)
     if (!firstDataRow) {
-        displayMessage(testFillMessage, '<i class="fas fa-info-circle mr-2"></i>No data rows found in the spreadsheet.', 'error', true);
+        displayMessage(testFillMessage, '<i class="fas fa-info-circle mr-2"></i>No data rows found in the spreadsheet for testing.', 'error', true);
         return;
     }
 
@@ -943,7 +996,7 @@ async function testFillFirstRow() {
     });
 
     if (Object.keys(selectedMappings).length === 0) {
-        displayMessage(testFillMessage, '<i class="fas fa-info-circle mr-2"></i>No fields selected for filling or no column mapped.', 'error', true);
+        displayMessage(testFillMessage, '<i class="fas fa-info-circle mr-2"></i>No fields selected for test filling or no column mapped.', 'error', true);
         return;
     }
 
@@ -954,7 +1007,7 @@ async function testFillFirstRow() {
 
         if (columnIndex !== -1) {
             const fieldsInThisGroup = groupedFormFields[contextKey];
-            const targetField = fieldsInThisGroup[0]; // Target the first instance of this grouped field
+            const targetField = fieldsInThisGroup[0]; // Target the first instance of this grouped field for test fill
             if (targetField) {
                 const value = firstDataRow[columnIndex];
                 dataToFillForFirstRow.push({
@@ -968,7 +1021,7 @@ async function testFillFirstRow() {
     }
 
     if (dataToFillForFirstRow.length === 0) {
-        displayMessage(testFillMessage, '<i class="fas fa-info-circle mr-2"></i>No data prepared for test filling based on current mappings and first spreadsheet row.', 'info', true);
+        displayMessage(testFillMessage, '<i class="fas fa-info-circle mr-2"></i>No data prepared for test filling based on current mappings and first spreadsheet row. Check your mappings.', 'info', true);
         return;
     }
 
@@ -1066,17 +1119,17 @@ function previewMappedValues() {
     if (hasPreviewData) {
         displayMessage(previewValuesMessage, previewHtml, 'info', true); // Pass true for raw HTML
     } else {
-        displayMessage(previewValuesMessage, '<i class="fas fa-info-circle mr-2"></i>No preview data available based on current selections.', 'info', true);
+        displayMessage(previewValuesMessage, '<i class="fas fa-info-circle mr-2"></i>No preview data available based on current selections. Select some fields and map columns.', 'info', true);
     }
 }
 
 
 /**
  * Displays a temporary message in a designated message box.
- * @param {HTMLElement} element - The message box element.
- * @param {string} message - The message to display.
+ * @param {HTMLElement} element - The message box element (e.g., scanMessage, fillDataMessage).
+ * @param {string} message - The message content (can be HTML if isHtml is true).
  * @param {'success'|'error'|'info'} type - The type of message for styling.
- * @param {boolean} isHtml - If true, message is treated as HTML.
+ * @param {boolean} isHtml - If true, message is parsed as HTML; otherwise, as plain text.
  */
 function displayMessage(element, message, type, isHtml = false) {
     if (isHtml) {
@@ -1084,16 +1137,18 @@ function displayMessage(element, message, type, isHtml = false) {
     } else {
         element.textContent = message;
     }
+    // Apply base class and type-specific class
     element.className = `message-box mt-3 ${type === 'success' ? 'message-success' : type === 'error' ? 'message-error' : 'message-info'}`;
     element.classList.remove('hidden');
-    // Ensure dark mode class is applied if body is dark
+
+    // Apply dark mode class based on current body theme
     if (document.body.classList.contains('dark')) {
         element.classList.add('dark');
     } else {
         element.classList.remove('dark');
     }
 
-    // For preview message, keep it longer, for others, 5 seconds
+    // Set a timeout to hide the message, with a longer duration for preview messages
     const duration = element.id === 'previewValuesMessage' ? 10000 : 5000;
     setTimeout(() => {
         element.classList.add('hidden');
@@ -1103,10 +1158,11 @@ function displayMessage(element, message, type, isHtml = false) {
 
 /**
  * Displays a temporary message in the specific fileStatusMessage element.
- * @param {string} message - The message to display.
+ * This is a specialized version of displayMessage for the file upload status.
+ * @param {string} message - The message content (can be HTML if isHtml is true).
  * @param {'success'|'error'|'info'} type - The type of message for styling.
  * @param {HTMLElement} element - The specific element to display the message (e.g., fileStatusMessage)
- * @param {boolean} isHtml - If true, message is treated as HTML.
+ * @param {boolean} isHtml - If true, message is parsed as HTML; otherwise, as plain text.
  */
 function displayFileStatusMessage(message, type, element, isHtml = false) {
     if (isHtml) {
@@ -1119,7 +1175,7 @@ function displayFileStatusMessage(message, type, element, isHtml = false) {
     element.className = 'file-status mt-4'; // Reset class for styling
     element.classList.add(`message-${type}`);
 
-    // Set icon based on type
+    // Set icon based on message type
     if (type === 'success') {
         fileStatusIcon.className = 'fas fa-check-circle text-xl mr-3';
     } else if (type === 'error') {
@@ -1135,9 +1191,10 @@ function displayFileStatusMessage(message, type, element, isHtml = false) {
         element.classList.remove('dark');
     }
 
+    // Hide after 5 seconds (standard duration for file status)
     setTimeout(() => {
         element.classList.add('hidden');
         fileMessage.innerHTML = ''; // Clear content when hidden
         fileStatusIcon.className = ''; // Clear icon
-    }, 5000); // Hide after 5 seconds
+    }, 5000); 
 }
