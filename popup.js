@@ -6,6 +6,21 @@ let availableFormFields = []; // Stores fields found on the active tab
 let groupedFormFields = {}; // Stores fields grouped by their 'surroundingText' or derived name
 let learnedMappings = {}; // Stores user's preferred mappings for schema learning
 
+// Helper to check if content script is already loaded and responsive
+async function isContentScriptLoaded(tabId) {
+    try {
+        // Send a dummy message to content.js and expect a 'pong' response
+        const response = await chrome.tabs.sendMessage(tabId, { action: "ping" });
+        return response && response.status === "pong";
+    } catch (e) {
+        // If an error occurs (e.g., recipient disconnected, script not injected),
+        // it means the content script is not loaded or not responding.
+        console.warn("Content script not loaded or not responding:", e.message);
+        return false;
+    }
+}
+
+
 // DOM Elements - Tabs
 const autoFillTab = document.getElementById("autoFillTab");
 const autoClickTab = document.getElementById("autoClickTab");
@@ -16,6 +31,7 @@ const autoClickSection = document.getElementById("autoClickSection");
 const fileInput = document.getElementById('fileInput');
 const dropArea = document.getElementById('drop-area'); // Reference to the drag and drop area
 const fileNameDisplay = document.getElementById('fileNameDisplay'); // Used for "Drag & Drop..." text initially, then file name
+const rowCountDisplay = document.getElementById('rowCountDisplay'); // New element for row count
 const fileStatusMessage = document.getElementById('fileStatusMessage'); // The combined status div
 const fileMessage = document.getElementById('fileMessage'); // Span inside status div for text
 const fileStatusIcon = document.getElementById('fileStatusIcon'); // Icon inside status div
@@ -28,7 +44,6 @@ const mappingContainer = document.getElementById('mappingContainer');
 const fillDataButton = document.getElementById('fillDataButton');
 const fillDataMessage = document.getElementById('fillDataMessage');
 const fillEmptyOnlyCheckbox = document.getElementById('fillEmptyOnlyCheckbox');
-const oneClickAutofillButton = document.getElementById('oneClickAutofillButton');
 const testFillButton = document.getElementById('testFillButton');
 const previewValuesButton = document.getElementById('previewValuesButton');
 const testFillMessage = document.getElementById('testFillMessage');
@@ -134,29 +149,13 @@ scanFieldsButton.addEventListener('click', async () => {
 });
 
 // Fill data button click
-fillDataButton.addEventListener('click', () => fillDataInTab(false));
-
-// One-Click Autofill button click
-oneClickAutofillButton.addEventListener('click', () => fillDataInTab(true));
+fillDataButton.addEventListener('click', () => fillDataInTab());
 
 // Test Fill button click
 testFillButton.addEventListener('click', () => testFillFirstRow());
 
 // Preview Values button click
 previewValuesButton.addEventListener('click', () => previewMappedValues());
-
-// Helper to check if content script is already loaded and responsive
-async function isContentScriptLoaded(tabId) {
-    try {
-        // Send a dummy message to content.js and expect a 'pong' response
-        const response = await chrome.tabs.sendMessage(tabId, { action: "ping" });
-        return response && response.status === "pong";
-    } catch (e) {
-        // If an error occurs (e.g., recipient disconnected, script not injected),
-        // it means the content script is not loaded or not responding.
-        return false;
-    }
-}
 
 
 // Auto Click Event Listeners
@@ -380,13 +379,29 @@ function handleFile() {
             if (sheetData.length === 0) {
                 displayFileStatusMessage('<i class="fas fa-exclamation-triangle"></i>The selected file is empty or could not be parsed.', 'error', fileStatusMessage, true);
                 dataDisplaySection.classList.add('hidden');
-                oneClickAutofillButton.classList.add('hidden'); // Hide autofill if no data
+                rowCountDisplay.classList.add('hidden');
                 return;
             }
 
             // The first row is the headers
             headers = sheetData[0];
             
+            // Calculate non-empty data rows
+            let nonEmtpyDataRowsCount = 0;
+            // Start from the second row (index 1) to skip headers
+            for (let i = 1; i < sheetData.length; i++) {
+                const row = sheetData[i];
+                // Check if the row contains at least one non-empty cell
+                // A cell is considered non-empty if its string representation after trimming is not empty
+                const isRowNonEmpty = row.some(cell => String(cell).trim() !== '');
+                if (isRowNonEmpty) {
+                    nonEmtpyDataRowsCount++;
+                }
+            }
+
+            rowCountDisplay.textContent = `Data Rows: ${nonEmtpyDataRowsCount}`;
+            rowCountDisplay.classList.remove('hidden'); // Show row count
+
             displayHeaders(headers); // Update UI with headers
             dataDisplaySection.classList.remove('hidden');
             displayFileStatusMessage(`<i class="fas fa-check-circle"></i>File "${file.name}" loaded successfully.`, 'success', fileStatusMessage, true);
@@ -396,17 +411,13 @@ function handleFile() {
                 setupFieldMapping(groupedFormFields, headers); // Re-setup mapping with new headers
                 autoMapFields(groupedFormFields, headers); // Re-run auto-map
                 fieldMappingSection.classList.remove('hidden');
-                oneClickAutofillButton.classList.remove('hidden'); // Show autofill if fields and headers exist
-            } else {
-                // If no fields scanned yet, hide autofill button
-                oneClickAutofillButton.classList.add('hidden');
             }
 
         } catch (error) {
             console.error("Error reading file:", error);
             displayFileStatusMessage(`<i class="fas fa-exclamation-triangle"></i>Error reading file: ${error.message}. Please ensure it's a valid spreadsheet format.`, 'error', fileStatusMessage, true);
             dataDisplaySection.classList.add('hidden');
-            oneClickAutofillButton.classList.add('hidden');
+            rowCountDisplay.classList.add('hidden');
         }
     };
 
@@ -414,7 +425,7 @@ function handleFile() {
         console.error("FileReader error:", e);
         displayFileStatusMessage(`<i class="fas fa-exclamation-triangle"></i>Error reading file: ${e.target.error.name}.`, 'error', fileStatusMessage, true);
         dataDisplaySection.classList.add('hidden');
-        oneClickAutofillButton.classList.add('hidden');
+        rowCountDisplay.classList.add('hidden');
     };
 
     reader.readAsArrayBuffer(file);
@@ -452,10 +463,8 @@ async function scanCurrentTabFields() {
     displayMessage(scanMessage, '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning current tab for fields...', 'info', true);
     scanFieldsButton.disabled = true; // Disable button during scan
     scanFieldsButton.innerHTML = 'Scanning... <span class="loading-spinner"></span>';
-    oneClickAutofillButton.classList.add('hidden'); // Hide autofill button during scan
 
     try {
-        // Get the active tab
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (!tab) {
             displayMessage(scanMessage, 'Could not get active tab.', 'error', false);
@@ -482,22 +491,18 @@ async function scanCurrentTabFields() {
                 autoMapFields(groupedFormFields, headers); // Call auto-map to pre-select dropdowns for groups
                 fieldMappingSection.classList.remove('hidden');
                 displayMessage(scanMessage, `<i class="fas fa-check-circle mr-2"></i>Found ${availableFormFields.length} fields on the page, grouped into ${Object.keys(groupedFormFields).length} sections. Attempting auto-mapping.`, 'success', true);
-                oneClickAutofillButton.classList.remove('hidden'); // Show autofill button if fields found
             } else {
                 fieldMappingSection.classList.add('hidden');
                 displayMessage(scanMessage, '<i class="fas fa-info-circle mr-2"></i>No input fields found on the current tab.', 'info', true);
-                oneClickAutofillButton.classList.add('hidden'); // Hide autofill button if no fields
             }
         } else {
             fieldMappingSection.classList.add('hidden');
             displayMessage(scanMessage, '<i class="fas fa-exclamation-triangle mr-2"></i>Failed to get fields from the current tab. Ensure content script can run.', 'error', true);
-            oneClickAutofillButton.classList.add('hidden'); // Hide autofill button if error
         }
     } catch (error) {
         console.error("Error scanning fields:", error);
         displayMessage(scanMessage, `<i class="fas fa-exclamation-triangle mr-2"></i>Error scanning fields: ${error.message}.`, 'error', true);
         fieldMappingSection.classList.add('hidden');
-        oneClickAutofillButton.classList.add('hidden'); // Hide autofill button if error
     } finally {
         scanFieldsButton.disabled = false;
         scanFieldsButton.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Scan Current Tab for Fields';
@@ -617,26 +622,6 @@ function setupFieldMapping(groupedFields, headersArray) {
         select.appendChild(fragment);
         groupControl.appendChild(select);
         mappingGroupItem.appendChild(groupControl);
-
-        // Display individual fields within this group (read-only for user information)
-        const fieldListContainer = document.createElement('div');
-        fieldListContainer.className = 'mt-2 text-xs text-gray-600 dark:text-gray-400';
-        fieldListContainer.innerHTML = '<p class="font-medium mb-1">Instances of this field on page:</p>';
-        fieldsInGroup.forEach(field => {
-            // Generate a user-friendly display name for the field instance
-            let displayName = field.labelText || field.name || field.placeholder || field.ariaLabel || field.title || 'Unnamed Field Instance';
-            displayName = displayName.replace(/\[\d+\]/g, '').trim(); // Clean array-like indexing
-            if (displayName.startsWith('stable-id-') || displayName.startsWith('generated-id-')) {
-                displayName = 'Unnamed Field Instance'; // Generic label for programmatically generated IDs
-            }
-
-            const fieldSpan = document.createElement('span');
-            // Apply theme classes for the field instance badges
-            fieldSpan.className = `inline-block px-2 py-0.5 rounded-full mr-1 mb-1 ${document.body.classList.contains('dark') ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`;
-            fieldSpan.textContent = displayName;
-            fieldListContainer.appendChild(fieldSpan);
-        });
-        mappingGroupItem.appendChild(fieldListContainer);
 
         mappingContainer.appendChild(mappingGroupItem);
 
@@ -837,7 +822,7 @@ async function loadLearnedMappings() {
  * This function now iterates through spreadsheet rows and prepares a batch for filling.
  * @param {boolean} isAutoFill - True if triggered by the "One-Click Autofill" button (implies auto-mapping first).
  */
-async function fillDataInTab(isAutoFill = false) {
+async function fillDataInTab() {
     if (!workbook || sheetData.length <= 1) { // sheetData includes headers, so >1 means actual data rows
         displayMessage(fillDataMessage, '<i class="fas fa-exclamation-triangle mr-2"></i>Please upload a spreadsheet file first.', 'error', true);
         return;
@@ -845,16 +830,6 @@ async function fillDataInTab(isAutoFill = false) {
     if (Object.keys(groupedFormFields).length === 0) {
         displayMessage(fillDataMessage, '<i class="fas fa-exclamation-triangle mr-2"></i>Please scan for fields on the current tab first.', 'error', true);
         return;
-    }
-
-    // If triggered by "One-Click Autofill", perform scan and auto-map first
-    if (isAutoFill) {
-        displayMessage(fillDataMessage, '<i class="fas fa-spinner fa-spin mr-2"></i>Performing One-Click Autofill (scanning and auto-mapping)...', 'info', true);
-        await scanCurrentTabFields(); // This will also call autoMapFields internally
-        if (Object.keys(groupedFormFields).length === 0) {
-            displayMessage(fillDataMessage, '<i class="fas fa-exclamation-triangle mr-2"></i>One-Click Autofill failed: No fields found after scan.', 'error', true);
-            return;
-        }
     }
 
     const actualDataRows = sheetData.slice(1); // Get data rows, excluding headers
@@ -881,8 +856,6 @@ async function fillDataInTab(isAutoFill = false) {
     // Disable buttons to prevent multiple submissions
     fillDataButton.disabled = true;
     fillDataButton.innerHTML = 'Filling... <span class="loading-spinner"></span>';
-    oneClickAutofillButton.disabled = true;
-    oneClickAutofillButton.innerHTML = 'One-Click Autofill... <span class="loading-spinner"></span>';
     testFillButton.disabled = true;
     previewValuesButton.disabled = true;
 
@@ -956,8 +929,6 @@ async function fillDataInTab(isAutoFill = false) {
         // Re-enable buttons regardless of success or failure
         fillDataButton.disabled = false;
         fillDataButton.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Fill Data';
-        oneClickAutofillButton.disabled = false;
-        oneClickAutofillButton.innerHTML = '<i class="fas fa-magic mr-2"></i>One-Click Autofill (Auto-Map & Fill)';
         testFillButton.disabled = false;
         previewValuesButton.disabled = false;
     }
@@ -1105,9 +1076,8 @@ function previewMappedValues() {
             const targetField = fieldsInThisGroup[0]; // Preview for the first instance of this grouped field
             if (targetField) {
                 const value = firstDataRow[columnIndex];
-                let displayName = targetField.labelText || targetField.name || targetField.placeholder || 'Unnamed Field';
-                displayName = displayName.replace(/\[\d+\]/g, '').trim();
-                if (displayName.startsWith('stable-id-')) displayName = 'Unnamed Field Instance';
+                // Using contextKey as the display name now that instances are hidden
+                const displayName = contextKey; 
 
                 previewHtml += `<li><strong>${displayName}</strong> (mapped to "${mappedColumnHeader}"): <code>${(value !== undefined && value !== null) ? String(value) : '[Empty]'}</code></li>`;
                 hasPreviewData = true;

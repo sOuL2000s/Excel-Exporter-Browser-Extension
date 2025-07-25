@@ -48,9 +48,11 @@
                 <div class="drop-area" id="drop-area">
                     <!-- Hidden file input, triggered by the custom browse button -->
                     <input type="file" id="fileInput" class="hidden" accept=".xls,.xlsx,.ods,.csv,.xlsm,.xlsb" />
-                    <p id="fileNameDisplay" class="text-gray-500 dark:text-gray-400 mb-4 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition duration-300 ease-in-out">
+                    <p id="fileNameDisplay" class="text-gray-500 dark:text-gray-400 mb-1 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition duration-300 ease-in-out">
                         Drag & Drop your file here, or
                     </p>
+                    <!-- New element for row count -->
+                    <p id="rowCountDisplay" class="text-gray-500 dark:text-gray-400 text-sm mb-4 hidden"></p>
                     <label for="fileInput" class="browse-button">
                         Browse File
                     </label>
@@ -106,15 +108,11 @@
                         <div id="previewValuesMessage" class="message-box mt-3 hidden"></div>
                     </div>
                 </div>
-
+                
                 <!-- Main fill data buttons -->
                 <div class="flex flex-col space-y-3 mt-6">
                     <button id="fillDataButton" class="action-button primary w-full">
                         <i class="fas fa-paper-plane mr-2"></i>Fill Data
-                    </button>
-                    <!-- Adjusted size and spacing to match primary button more closely -->
-                    <button id="oneClickAutofillButton" class="action-button primary w-full hidden">
-                        <i class="fas fa-magic mr-2"></i>One-Click Autofill (Auto-Map &amp; Fill)
                     </button>
                 </div>
                 
