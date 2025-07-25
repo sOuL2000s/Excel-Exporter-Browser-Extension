@@ -214,7 +214,7 @@ body {
 }
 
 /* Explicitly hide the default file input */
-#fileInput {
+#fileInputAutoFill, #fileInputFullAutomation { /* Updated IDs */
     display: none !important;
 }
 
@@ -278,6 +278,13 @@ body {
     /* Custom focus ring for accessibility, simpler now */
     box-shadow: 0 0 0 4px rgba(var(--focus-ring-color-rgb), 0.5); 
 }
+.action-button:disabled { /* Styling for disabled buttons */
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none; /* Disable lift effect when disabled */
+    box-shadow: none;
+}
+
 
 /* Specific button colors (light mode) */
 .action-button.primary {
@@ -287,7 +294,7 @@ body {
     box-shadow: var(--primary-button-shadow-light); /* Apply defined shadow */
     --focus-ring-color-rgb: 37, 99, 235; /* RGB for blue-600 */
 }
-.action-button.primary:hover {
+.action-button.primary:hover:not(:disabled) {
     background-color: var(--primary-button-hover-bg-light);
     box-shadow: 0 15px 30px -10px rgba(37, 99, 235, 0.5), 0 6px 10px -3px rgba(37, 99, 235, 0.3); /* Even stronger hover shadow */
 }
@@ -299,7 +306,7 @@ body {
     box-shadow: var(--emerald-button-shadow-light);
     --focus-ring-color-rgb: 5, 150, 105; /* RGB for emerald-600 */
 }
-.action-button.emerald:hover {
+.action-button.emerald:hover:not(:disabled) {
     background-color: var(--emerald-button-hover-bg-light);
     box-shadow: 0 15px 30px -10px rgba(5, 150, 105, 0.5), 0 6px 10px -3px rgba(5, 150, 105, 0.3);
 }
@@ -311,7 +318,7 @@ body {
     box-shadow: var(--secondary-button-shadow-light); /* Lighter shadow */
     --focus-ring-color-rgb: 107, 114, 128; /* gray-500 RGB */
 }
-.action-button.secondary:hover {
+.action-button.secondary:hover:not(:disabled) {
     background-color: var(--secondary-button-hover-bg-light);
     box-shadow: 0 12px 20px -8px rgba(107, 114, 128, 0.35), 0 5px 8px -2px rgba(107, 114, 128, 0.15);
 }
@@ -334,6 +341,15 @@ body {
     outline: none;
     box-shadow: 0 0 0 3px rgba(var(--input-focus-ring-rgb-values-light), 0.3); /* Custom focus ring */
 }
+.form-input:disabled { /* Styling for disabled inputs */
+    background-color: #f3f4f6; /* Lighter gray for disabled */
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+body.dark .form-input:disabled {
+    background-color: #374151; /* Darker gray for disabled in dark mode */
+}
+
 
 /* File Drop Area Styling */
 .drop-area {
@@ -397,7 +413,8 @@ body {
     border: 1px solid var(--file-status-success-border-light);
     color: var(--file-status-success-text-light);
 }
-.file-status.message-success #fileStatusIcon {
+.file-status.message-success #fileStatusIconAutoFill,
+.file-status.message-success #fileStatusIconFullAutomation { /* Updated IDs */
     color: var(--file-status-success-icon-light);
 }
 .file-status.message-error {
@@ -405,7 +422,8 @@ body {
     border: 1px solid var(--file-status-error-border-light);
     color: var(--file-status-error-text-light);
 }
-.file-status.message-error #fileStatusIcon {
+.file-status.message-error #fileStatusIconAutoFill,
+.file-status.message-error #fileStatusIconFullAutomation { /* Updated IDs */
     color: var(--file-status-error-icon-light);
 }
 .file-status.message-info {
@@ -413,7 +431,8 @@ body {
     border: 1px solid var(--file-status-info-border-light);
     color: var(--file-status-info-text-light);
 }
-.file-status.message-info #fileStatusIcon {
+.file-status.message-info #fileStatusIconAutoFill,
+.file-status.message-info #fileStatusIconFullAutomation { /* Updated IDs */
     color: var(--file-status-info-icon-light);
 }
 
@@ -740,7 +759,7 @@ body.dark {
     box-shadow: var(--primary-button-shadow-dark);
     --focus-ring-color-rgb: 79, 70, 229; /* indigo-600 RGB */
 }
-.action-button.primary.dark:hover {
+.action-button.primary.dark:hover:not(:disabled) {
     background-color: var(--primary-button-hover-bg-dark);
     box-shadow: 0 15px 30px -10px rgba(79, 70, 229, 0.5), 0 6px 10px -3px rgba(79, 70, 229, 0.3);
 }
@@ -750,7 +769,7 @@ body.dark {
     box-shadow: var(--emerald-button-shadow-dark);
     --focus-ring-color-rgb: 6, 95, 70; /* emerald-800 RGB */
 }
-.action-button.emerald.dark:hover {
+.action-button.emerald.dark:hover:not(:disabled) {
     background-color: var(--emerald-button-hover-bg-dark);
     box-shadow: 0 15px 30px -10px rgba(6, 95, 70, 0.5), 0 6px 10px -3px rgba(6, 95, 70, 0.3);
 }
@@ -761,7 +780,7 @@ body.dark {
     box-shadow: var(--secondary-button-shadow-dark);
     --focus-ring-color-rgb: 74, 85, 104; /* gray-700 RGB */
 }
-.action-button.secondary.dark:hover {
+.action-button.secondary.dark:hover:not(:disabled) {
     background-color: var(--secondary-button-hover-bg-dark);
     box-shadow: 0 12px 20px -8px rgba(74, 85, 104, 0.35), 0 5px 8px -2px rgba(74, 85, 104, 0.15);
 }
@@ -800,7 +819,8 @@ body.dark {
   border-color: var(--file-status-success-border-dark);
   color: var(--file-status-success-text-dark);
 }
-.file-status.message-success.dark #fileStatusIcon {
+.file-status.message-success.dark #fileStatusIconAutoFill,
+.file-status.message-success.dark #fileStatusIconFullAutomation { /* Updated IDs */
     color: var(--file-status-success-icon-dark);
 }
 .file-status.message-error.dark {
@@ -808,7 +828,8 @@ body.dark {
   border-color: var(--file-status-error-border-dark);
   color: var(--file-status-error-text-dark);
 }
-.file-status.message-error.dark #fileStatusIcon {
+.file-status.message-error.dark #fileStatusIconAutoFill,
+.file-status.message-error.dark #fileStatusIconFullAutomation { /* Updated IDs */
     color: var(--file-status-error-icon-dark);
 }
 .file-status.message-info.dark {
@@ -816,7 +837,8 @@ body.dark {
   border-color: var(--file-status-info-border-dark);
   color: var(--file-status-info-text-dark);
 }
-.file-status.message-info.dark #fileStatusIcon {
+.file-status.message-info.dark #fileStatusIconAutoFill,
+.file-status.message-info.dark #fileStatusIconFullAutomation { /* Updated IDs */
     color: var(--file-status-info-icon-dark);
 }
 .headers-list.dark span {

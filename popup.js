@@ -5,6 +5,7 @@ let headers = [];   // Stores the first row (headers)
 let availableFormFields = []; // Stores fields found on the active tab
 let groupedFormFields = {}; // Stores fields grouped by their 'surroundingText' or derived name
 let learnedMappings = {}; // Stores user's preferred mappings for schema learning
+let actualNonEmptyDataRowsCount = 0; // NEW: Stores the count of actual data rows, excluding empty ones
 
 // Helper to check if content script is already loaded and responsive
 async function isContentScriptLoaded(tabId) {
@@ -24,39 +25,60 @@ async function isContentScriptLoaded(tabId) {
 // DOM Elements - Tabs
 const autoFillTab = document.getElementById("autoFillTab");
 const autoClickTab = document.getElementById("autoClickTab");
+const fullAutomationTab = document.getElementById("fullAutomationTab"); // New Tab
 const autoFillSection = document.getElementById("autoFillSection");
 const autoClickSection = document.getElementById("autoClickSection");
+const fullAutomationSection = document.getElementById("fullAutomationSection"); // New Section
 
-// DOM Elements - Auto Fill Section
-const fileInput = document.getElementById('fileInput');
-const dropArea = document.getElementById('drop-area'); // Reference to the drag and drop area
-const fileNameDisplay = document.getElementById('fileNameDisplay'); // Used for "Drag & Drop..." text initially, then file name
-const rowCountDisplay = document.getElementById('rowCountDisplay'); // New element for row count
-const fileStatusMessage = document.getElementById('fileStatusMessage'); // The combined status div
-const fileMessage = document.getElementById('fileMessage'); // Span inside status div for text
-const fileStatusIcon = document.getElementById('fileStatusIcon'); // Icon inside status div
-const dataDisplaySection = document.getElementById('dataDisplaySection');
-const headersDisplay = document.getElementById('headersDisplay');
-const scanFieldsButton = document.getElementById('scanFieldsButton');
-const scanMessage = document.getElementById('scanMessage');
-const fieldMappingSection = document.getElementById('fieldMappingSection');
-const mappingContainer = document.getElementById('mappingContainer');
-const fillDataButton = document.getElementById('fillDataButton');
-const fillDataMessage = document.getElementById('fillDataMessage');
-const fillEmptyOnlyCheckbox = document.getElementById('fillEmptyOnlyCheckbox');
-const testFillButton = document.getElementById('testFillButton');
-const previewValuesButton = document.getElementById('previewValuesButton');
-const testFillMessage = document.getElementById('testFillMessage');
-const previewValuesMessage = document.getElementById('previewValuesMessage');
+// DOM Elements - Auto Fill Section (prefixed with AutoFill)
+const fileInputAutoFill = document.getElementById('fileInputAutoFill');
+const dropAreaAutoFill = document.getElementById('drop-area-autofill');
+const fileNameDisplayAutoFill = document.getElementById('fileNameDisplayAutoFill');
+const rowCountDisplayAutoFill = document.getElementById('rowCountDisplayAutoFill');
+const fileStatusMessageAutoFill = document.getElementById('fileStatusMessageAutoFill');
+const fileMessageAutoFill = document.getElementById('fileMessageAutoFill');
+const fileStatusIconAutoFill = document.getElementById('fileStatusIconAutoFill');
+const dataDisplaySectionAutoFill = document.getElementById('dataDisplaySectionAutoFill');
+const headersDisplayAutoFill = document.getElementById('headersDisplayAutoFill');
+const scanFieldsButtonAutoFill = document.getElementById('scanFieldsButtonAutoFill');
+const scanMessageAutoFill = document.getElementById('scanMessageAutoFill');
+const fieldMappingSectionAutoFill = document.getElementById('fieldMappingSectionAutoFill');
+const mappingContainerAutoFill = document.getElementById('mappingContainerAutoFill');
+const fillDataButtonAutoFill = document.getElementById('fillDataButtonAutoFill');
+const fillDataMessageAutoFill = document.getElementById('fillDataMessageAutoFill');
+const fillEmptyOnlyCheckboxAutoFill = document.getElementById('fillEmptyOnlyCheckboxAutoFill');
+const testFillButtonAutoFill = document.getElementById('testFillButtonAutoFill');
+const previewValuesButtonAutoFill = document.getElementById('previewValuesButtonAutoFill');
+const testFillMessageAutoFill = document.getElementById('testFillMessageAutoFill');
+const previewValuesMessageAutoFill = document.getElementById('previewValuesMessageAutoFill');
 
-// DOM Elements - Auto Click Section
+// DOM Elements - Auto Click Section (existing)
 const scanButtons = document.getElementById("scanButtons");
 const clickableButtonsContainer = document.getElementById("clickableButtonsContainer");
 const clickCountInput = document.getElementById("clickCount");
 const startClickingButton = document.getElementById("startClicking");
 const autoClickMessage = document.getElementById("autoClickMessage");
-const selectButtonCard = document.getElementById("selectButtonCard"); // Card for step 2
-const clickControlSection = document.getElementById("clickControlSection"); // Card for step 3
+const selectButtonCard = document.getElementById("selectButtonCard");
+const clickControlSection = document.getElementById("clickControlSection");
+
+// DOM Elements - Full Automation Section (new)
+const fileInputFullAutomation = document.getElementById('fileInputFullAutomation');
+const dropAreaFullAutomation = document.getElementById('drop-area-fullautomation');
+const fileNameDisplayFullAutomation = document.getElementById('fileNameDisplayFullAutomation');
+const rowCountDisplayFullAutomation = document.getElementById('rowCountDisplayFullAutomation');
+const fileStatusMessageFullAutomation = document.getElementById('fileStatusMessageFullAutomation');
+const fileMessageFullAutomation = document.getElementById('fileMessageFullAutomation');
+const fileStatusIconFullAutomation = document.getElementById('fileStatusIconFullAutomation');
+const dataDisplaySectionFullAutomation = document.getElementById('dataDisplaySectionFullAutomation');
+const headersDisplayFullAutomation = document.getElementById('headersDisplayFullAutomation');
+const scanFieldsButtonFullAutomation = document.getElementById('scanFieldsButtonFullAutomation');
+const scanMessageFullAutomation = document.getElementById('scanMessageFullAutomation');
+const fieldMappingSectionFullAutomation = document.getElementById('fieldMappingSectionFullAutomation');
+const mappingContainerFullAutomation = document.getElementById('mappingContainerFullAutomation');
+const fillEmptyOnlyCheckboxFullAutomation = document.getElementById('fillEmptyOnlyCheckboxFullAutomation');
+const startFullAutomationButton = document.getElementById("startFullAutomationButton");
+const fullAutomationMessage = document.getElementById("fullAutomationMessage");
+
 
 // DOM Elements - Theme Toggle
 const themeToggle = document.getElementById('themeToggle');
@@ -67,6 +89,7 @@ const themeToggle = document.getElementById('themeToggle');
 // Tab switching logic
 autoFillTab.addEventListener("click", () => switchTab('autoFill'));
 autoClickTab.addEventListener("click", () => switchTab('autoClick'));
+fullAutomationTab.addEventListener("click", () => switchTab('fullAutomation')); // New Tab Listener
 
 // Theme toggle logic
 themeToggle.addEventListener('change', () => {
@@ -118,49 +141,49 @@ themeToggle.addEventListener('change', () => {
     localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
 });
 
-// File input change
-fileInput.addEventListener('change', handleFile);
+// File input change for AutoFill
+fileInputAutoFill.addEventListener('change', (event) => handleFile(event, 'autoFill'));
 
-// Drag and drop functionality for file input
-dropArea.addEventListener('dragover', (e) => {
+// Drag and drop functionality for AutoFill file input
+dropAreaAutoFill.addEventListener('dragover', (e) => {
     e.preventDefault();
-    dropArea.classList.add('border-blue-600', 'bg-blue-100', 'dark:border-indigo-500', 'dark:bg-indigo-900');
-    // Add hover text color effects only when dragging over
-    fileNameDisplay.classList.add('group-hover:text-blue-700', 'dark:group-hover:text-blue-300'); 
+    dropAreaAutoFill.classList.add('border-blue-600', 'bg-blue-100', 'dark:border-indigo-500', 'dark:bg-indigo-900');
+    fileNameDisplayAutoFill.classList.add('group-hover:text-blue-700', 'dark:group-hover:text-blue-300'); 
 });
-dropArea.addEventListener('dragleave', (e) => {
+dropAreaAutoFill.addEventListener('dragleave', (e) => {
     e.preventDefault();
-    dropArea.classList.remove('border-blue-600', 'bg-blue-100', 'dark:border-indigo-500', 'dark:bg-indigo-900');
-    fileNameDisplay.classList.remove('group-hover:text-blue-700', 'dark:group-hover:text-blue-300');
+    dropAreaAutoFill.classList.remove('border-blue-600', 'bg-blue-100', 'dark:border-indigo-500', 'dark:bg-indigo-900');
+    fileNameDisplayAutoFill.classList.remove('group-hover:text-blue-700', 'dark:group-hover:text-blue-300');
 });
-dropArea.addEventListener('drop', (e) => {
+dropAreaAutoFill.addEventListener('drop', (e) => {
     e.preventDefault();
-    dropArea.classList.remove('border-blue-600', 'bg-blue-100', 'dark:border-indigo-500', 'dark:bg-indigo-900');
-    fileNameDisplay.classList.remove('group-hover:text-blue-700', 'dark:group-hover:text-blue-300');
+    dropAreaAutoFill.classList.remove('border-blue-600', 'bg-blue-100', 'dark:border-indigo-500', 'dark:bg-indigo-900');
+    fileNameDisplayAutoFill.classList.remove('group-hover:text-blue-700', 'dark:group-hover:text-blue-300');
     if (e.dataTransfer.files.length > 0) {
-        fileInput.files = e.dataTransfer.files;
-        handleFile();
+        fileInputAutoFill.files = e.dataTransfer.files;
+        handleFile(null, 'autoFill'); // Pass null for event, use ID prefix
     }
 });
 
-// Scan fields button click
-scanFieldsButton.addEventListener('click', async () => {
-    await scanCurrentTabFields();
+// Scan fields button click for AutoFill
+scanFieldsButtonAutoFill.addEventListener('click', async () => {
+    await scanCurrentTabFields('autoFill');
 });
 
-// Fill data button click
-fillDataButton.addEventListener('click', () => fillDataInTab());
+// Fill data button click for AutoFill
+fillDataButtonAutoFill.addEventListener('click', () => fillDataInTab('autoFill'));
 
-// Test Fill button click
-testFillButton.addEventListener('click', () => testFillFirstRow());
+// Test Fill button click for AutoFill
+testFillButtonAutoFill.addEventListener('click', () => testFillFirstRow('autoFill'));
 
-// Preview Values button click
-previewValuesButton.addEventListener('click', () => previewMappedValues());
+// Preview Values button click for AutoFill
+previewValuesButtonAutoFill.addEventListener('click', () => previewMappedValues('autoFill'));
 
 
-// Auto Click Event Listeners
+// Auto Click Event Listeners (existing)
 scanButtons.addEventListener("click", async () => {
-    displayFileStatusMessage('<i class="fas fa-spinner fa-spin"></i>Scanning for clickable buttons...', 'info', autoClickMessage, true);
+    // FIX: Changed to use displayMessage
+    displayMessage(autoClickMessage, '<i class="fas fa-spinner fa-spin"></i>Scanning for clickable buttons...', 'info', true);
     scanButtons.disabled = true;
     scanButtons.innerHTML = 'Scanning... <span class="loading-spinner"></span>';
     clickableButtonsContainer.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-sm p-2">Scanning...</p>'; // Clear previous buttons and show scanning message
@@ -168,7 +191,8 @@ scanButtons.addEventListener("click", async () => {
     try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (!tab) {
-            displayFileStatusMessage('Could not get active tab.', 'error', autoClickMessage, true);
+            // FIX: Changed to use displayMessage
+            displayMessage(autoClickMessage, 'Could not get active tab.', 'error', false);
             return;
         }
 
@@ -215,22 +239,26 @@ scanButtons.addEventListener("click", async () => {
                 });
                 selectButtonCard.classList.remove("hidden"); // Show Step 2 card
                 clickControlSection.classList.remove("hidden"); // Show Step 3 card
-                displayFileStatusMessage(`<i class="fas fa-check-circle"></i>Found ${response.clickables.length} clickable elements.`, 'success', autoClickMessage, true);
+                // FIX: Changed to use displayMessage
+                displayMessage(autoClickMessage, `<i class="fas fa-check-circle"></i>Found ${response.clickables.length} clickable elements.`, 'success', true);
             } else {
                 clickableButtonsContainer.innerHTML = "<p class='text-gray-500 dark:text-gray-400 text-sm p-2'>No clickable buttons found on this page.</p>";
                 selectButtonCard.classList.add("hidden");
                 clickControlSection.classList.add("hidden");
-                displayFileStatusMessage('<i class="fas fa-info-circle"></i>No clickable buttons found on the current tab.', 'info', autoClickMessage, true);
+                // FIX: Changed to use displayMessage
+                displayMessage(autoClickMessage, '<i class="fas fa-info-circle"></i>No clickable buttons found on the current tab.', 'info', true);
             }
         } else {
             clickableButtonsContainer.innerHTML = "<p class='text-gray-500 dark:text-gray-400 text-sm p-2'>Failed to scan for buttons.</p>";
             selectButtonCard.classList.add("hidden");
             clickControlSection.classList.add("hidden");
-            displayFileStatusMessage('<i class="fas fa-exclamation-triangle"></i>Failed to get clickable elements from the current tab. Ensure content script can run.', 'error', autoClickMessage, true);
+            // FIX: Changed to use displayMessage
+            displayMessage(autoClickMessage, '<i class="fas fa-exclamation-triangle"></i>Failed to get clickable elements from the current tab. Ensure content script can run.', 'error', true);
         }
     } catch (error) {
         console.error("Error scanning buttons:", error);
-        displayFileStatusMessage(`<i class="fas fa-exclamation-triangle"></i>Error scanning buttons: ${error.message}. Check console for details.`, 'error', autoClickMessage, true);
+        // FIX: Changed to use displayMessage
+        displayMessage(autoClickMessage, `<i class="fas fa-exclamation-triangle"></i>Error scanning buttons: ${error.message}. Check console for details.`, 'error', true);
         clickableButtonsContainer.innerHTML = "<p class='text-gray-500 dark:text-gray-400 text-sm p-2'>Error scanning for buttons. Check console for details.</p>";
         selectButtonCard.classList.add("hidden");
         clickControlSection.classList.add("hidden");
@@ -246,16 +274,17 @@ startClickingButton.addEventListener("click", async () => {
     const stableId = selected?.value;
 
     if (isNaN(count) || count < 1) {
-        displayFileStatusMessage("Please enter a valid number of clicks (1 or more).", "error", autoClickMessage, false);
+        displayMessage(autoClickMessage, "Please enter a valid number of clicks (1 or more).", "error", false);
         return;
     }
 
     if (!stableId) {
-        displayFileStatusMessage("Please select a button to click.", "error", autoClickMessage, false);
+        displayMessage(autoClickMessage, "Please select a button to click.", "error", false);
         return;
     }
 
-    displayFileStatusMessage(`<i class="fas fa-circle-notch fa-spin"></i>Attempting to click ${count} time(s)...`, 'info', autoClickMessage, true);
+    // FIX: Changed to use displayMessage
+    displayMessage(autoClickMessage, `<i class="fas fa-circle-notch fa-spin"></i>Attempting to click ${count} time(s)...`, 'info', true);
     startClickingButton.disabled = true;
     startClickingButton.innerHTML = 'Clicking... <span class="loading-spinner"></span>';
 
@@ -263,7 +292,8 @@ startClickingButton.addEventListener("click", async () => {
     try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (!tab) {
-            displayFileStatusMessage('Could not get active tab.', 'error', autoClickMessage, false);
+            // FIX: Changed to use displayMessage
+            displayMessage(autoClickMessage, 'Could not get active tab.', 'error', false);
             return;
         }
 
@@ -275,19 +305,52 @@ startClickingButton.addEventListener("click", async () => {
         });
 
         if (response?.status === "success") {
-            displayFileStatusMessage(`<i class="fas fa-check-circle"></i>Clicked ${count} time(s) successfully.`, "success", autoClickMessage, true);
+            // FIX: Changed to use displayMessage
+            displayMessage(autoClickMessage, `<i class="fas fa-check-circle"></i>Clicked ${count} time(s) successfully.`, "success", true);
         } else {
             console.error(`Error during click: ${response?.message || 'Unknown error.'}`);
-            displayFileStatusMessage(`<i class="fas fa-exclamation-triangle"></i>Failed to click: ${response?.message || 'Unknown error.'}`, "error", autoClickMessage, true);
+            // FIX: Changed to use displayMessage
+            displayMessage(autoClickMessage, `<i class="fas fa-exclamation-triangle"></i>Failed to click: ${response?.message || 'Unknown error.'}`, "error", true);
         }
     } catch (error) {
         console.error("Error performing click:", error);
-        displayFileStatusMessage(`<i class="fas fa-exclamation-triangle"></i>Error performing click: ${error.message}.`, "error", autoClickMessage, true);
+        // FIX: Changed to use displayMessage
+        displayMessage(autoClickMessage, `<i class="fas fa-exclamation-triangle"></i>Error performing click: ${error.message}.`, "error", true);
     } finally {
         startClickingButton.disabled = false;
         startClickingButton.innerHTML = '<i class="fas fa-bullseye mr-2"></i>Start Clicking';
     }
 });
+
+
+// Full Automation Event Listeners (new)
+fileInputFullAutomation.addEventListener('change', (event) => handleFile(event, 'fullAutomation'));
+dropAreaFullAutomation.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropAreaFullAutomation.classList.add('border-blue-600', 'bg-blue-100', 'dark:border-indigo-500', 'dark:bg-indigo-900');
+    fileNameDisplayFullAutomation.classList.add('group-hover:text-blue-blue-700', 'dark:group-hover:text-blue-300'); 
+});
+dropAreaFullAutomation.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    dropAreaFullAutomation.classList.remove('border-blue-600', 'bg-blue-100', 'dark:border-indigo-500', 'dark:bg-indigo-900');
+    fileNameDisplayFullAutomation.classList.remove('group-hover:text-blue-blue-700', 'dark:group-hover:text-blue-300');
+});
+dropAreaFullAutomation.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropAreaFullAutomation.classList.remove('border-blue-600', 'bg-blue-100', 'dark:border-indigo-500', 'dark:bg-indigo-900');
+    fileNameDisplayFullAutomation.classList.remove('group-hover:text-blue-blue-700', 'dark:group-hover:text-blue-300');
+    if (e.dataTransfer.files.length > 0) {
+        fileInputFullAutomation.files = e.dataTransfer.files;
+        handleFile(null, 'fullAutomation');
+    }
+});
+
+scanFieldsButtonFullAutomation.addEventListener('click', async () => {
+    await scanCurrentTabFields('fullAutomation');
+});
+
+startFullAutomationButton.addEventListener('click', startFullAutomation);
+
 
 // Load learned mappings and initial tab on startup
 document.addEventListener('DOMContentLoaded', () => {
@@ -307,14 +370,15 @@ document.addEventListener('DOMContentLoaded', () => {
 // --- Functions ---
 
 /**
- * Switches between the Auto Fill and Auto Click tabs.
- * @param {string} activeTabId - The ID of the tab to activate ('autoFill' or 'autoClick').
+ * Switches between the Auto Fill, Auto Click, and Full Automation tabs.
+ * @param {string} activeTabId - The ID of the tab to activate ('autoFill', 'autoClick', or 'fullAutomation').
  */
 async function switchTab(activeTabId) {
     // Remove active class from all tabs and add to the selected one
     autoFillTab.classList.remove('active', 'dark:active');
     autoClickTab.classList.remove('active', 'dark:active');
-    
+    fullAutomationTab.classList.remove('active', 'dark:active'); // New tab
+
     const targetTabButton = document.getElementById(`${activeTabId}Tab`);
     targetTabButton.classList.add('active');
     // Ensure dark mode active class is applied if current theme is dark
@@ -325,6 +389,7 @@ async function switchTab(activeTabId) {
     // Hide all tab sections and show the selected one
     autoFillSection.classList.add('hidden');
     autoClickSection.classList.add('hidden');
+    fullAutomationSection.classList.add('hidden'); // New section
     document.getElementById(`${activeTabId}Section`).classList.remove('hidden');
 
     // Save tab preference to chrome.storage.sync
@@ -352,16 +417,26 @@ async function loadTabPreference() {
 
 /**
  * Handles the file selection and reads its content.
+ * @param {Event} event - The file input change event.
+ * @param {string} targetSection - 'autoFill' or 'fullAutomation' to identify which section triggered the upload.
  */
-function handleFile() {
-    const file = fileInput.files[0];
+function handleFile(event, targetSection) {
+    const fileInputElem = targetSection === 'autoFill' ? fileInputAutoFill : fileInputFullAutomation;
+    const fileNameDisplayElem = targetSection === 'autoFill' ? fileNameDisplayAutoFill : fileNameDisplayFullAutomation;
+    const rowCountDisplayElem = targetSection === 'autoFill' ? rowCountDisplayAutoFill : rowCountDisplayFullAutomation;
+    const fileStatusMessageElem = targetSection === 'autoFill' ? fileStatusMessageAutoFill : fileStatusMessageFullAutomation;
+    const fileMessageElem = targetSection === 'autoFill' ? fileMessageAutoFill : fileMessageFullAutomation;
+    const fileStatusIconElem = targetSection === 'autoFill' ? fileStatusIconAutoFill : fileStatusIconFullAutomation;
+    const dataDisplaySectionElem = targetSection === 'autoFill' ? dataDisplaySectionAutoFill : dataDisplaySectionFullAutomation;
+
+    const file = fileInputElem.files[0];
     if (!file) {
-        displayFileStatusMessage('<i class="fas fa-exclamation-triangle"></i>No file selected.', 'error', fileStatusMessage, true);
+        displayFileStatusMessage('<i class="fas fa-exclamation-triangle"></i>No file selected.', 'error', fileStatusMessageElem, fileMessageElem, fileStatusIconElem, true);
         return;
     }
 
-    fileNameDisplay.textContent = `File: "${file.name}"`; // Update text to show file name
-    displayFileStatusMessage(`<i class="fas fa-spinner fa-spin"></i>Reading "${file.name}"...`, 'info', fileStatusMessage, true);
+    fileNameDisplayElem.textContent = `File: "${file.name}"`; // Update text to show file name
+    displayFileStatusMessage(`<i class="fas fa-spinner fa-spin"></i>Reading "${file.name}"...`, 'info', fileStatusMessageElem, fileMessageElem, fileStatusIconElem, true);
 
     const reader = new FileReader();
 
@@ -377,9 +452,9 @@ function handleFile() {
             sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
 
             if (sheetData.length === 0) {
-                displayFileStatusMessage('<i class="fas fa-exclamation-triangle"></i>The selected file is empty or could not be parsed.', 'error', fileStatusMessage, true);
-                dataDisplaySection.classList.add('hidden');
-                rowCountDisplay.classList.add('hidden');
+                displayFileStatusMessage('<i class="fas fa-exclamation-triangle"></i>The selected file is empty or could not be parsed.', 'error', fileStatusMessageElem, fileMessageElem, fileStatusIconElem, true);
+                dataDisplaySectionElem.classList.add('hidden');
+                rowCountDisplayElem.classList.add('hidden');
                 return;
             }
 
@@ -399,75 +474,85 @@ function handleFile() {
                 }
             }
 
-            rowCountDisplay.textContent = `Data Rows: ${nonEmtpyDataRowsCount}`;
-            rowCountDisplay.classList.remove('hidden'); // Show row count
+            // Store the actual non-empty data row count in the global variable
+            actualNonEmptyDataRowsCount = nonEmtpyDataRowsCount;
 
-            displayHeaders(headers); // Update UI with headers
-            dataDisplaySection.classList.remove('hidden');
-            displayFileStatusMessage(`<i class="fas fa-check-circle"></i>File "${file.name}" loaded successfully.`, 'success', fileStatusMessage, true);
+            rowCountDisplayElem.textContent = `Data Rows: ${actualNonEmptyDataRowsCount}`;
+            rowCountDisplayElem.classList.remove('hidden'); // Show row count
+
+            displayHeaders(headers, targetSection); // Update UI with headers
+            dataDisplaySectionElem.classList.remove('hidden');
+            displayFileStatusMessage(`<i class="fas fa-check-circle"></i>File "${file.name}" loaded successfully.`, 'success', fileStatusMessageElem, fileMessageElem, fileStatusIconElem, true);
 
             // If fields were already scanned, re-setup mapping with new headers and re-auto-map
             if (Object.keys(groupedFormFields).length > 0) { // Check groupedFormFields for existing scan
-                setupFieldMapping(groupedFormFields, headers); // Re-setup mapping with new headers
-                autoMapFields(groupedFormFields, headers); // Re-run auto-map
-                fieldMappingSection.classList.remove('hidden');
+                setupFieldMapping(groupedFormFields, headers, targetSection); // Re-setup mapping with new headers
+                autoMapFields(groupedFormFields, headers, targetSection); // Re-run auto-map
+                (targetSection === 'autoFill' ? fieldMappingSectionAutoFill : fieldMappingSectionFullAutomation).classList.remove('hidden');
             }
 
         } catch (error) {
             console.error("Error reading file:", error);
-            displayFileStatusMessage(`<i class="fas fa-exclamation-triangle"></i>Error reading file: ${error.message}. Please ensure it's a valid spreadsheet format.`, 'error', fileStatusMessage, true);
-            dataDisplaySection.classList.add('hidden');
-            rowCountDisplay.classList.add('hidden');
+            displayFileStatusMessage(`<i class="fas fa-exclamation-triangle"></i>Error reading file: ${error.message}. Please ensure it's a valid spreadsheet format.`, 'error', fileStatusMessageElem, fileMessageElem, fileStatusIconElem, true);
+            dataDisplaySectionElem.classList.add('hidden');
+            rowCountDisplayElem.classList.add('hidden');
         }
     };
 
     reader.onerror = function(e) {
         console.error("FileReader error:", e);
-        displayFileStatusMessage(`<i class="fas fa-exclamation-triangle"></i>Error reading file: ${e.target.error.name}.`, 'error', fileStatusMessage, true);
-        dataDisplaySection.classList.add('hidden');
-        rowCountDisplay.classList.add('hidden');
+        displayFileStatusMessage(`<i class="fas fa-exclamation-triangle"></i>Error reading file: ${e.target.error.name}.`, 'error', fileStatusMessageElem, fileMessageElem, fileStatusIconElem, true);
+        dataDisplaySectionElem.classList.add('hidden');
+        rowCountDisplayElem.classList.add('hidden');
     };
 
     reader.readAsArrayBuffer(file);
 }
 
 /**
- * Displays the extracted headers in the UI.
+ * Displays the extracted headers in the UI for the specified section.
  * @param {string[]} headersArray - Array of header strings.
+ * @param {string} targetSection - 'autoFill' or 'fullAutomation'.
  */
-function displayHeaders(headersArray) {
-    headersDisplay.innerHTML = ''; // Clear previous headers
+function displayHeaders(headersArray, targetSection) {
+    const headersDisplayElem = targetSection === 'autoFill' ? headersDisplayAutoFill : headersDisplayFullAutomation;
+    headersDisplayElem.innerHTML = ''; // Clear previous headers
     if (headersArray.length > 0) {
         headersArray.forEach(header => {
             const span = document.createElement('span');
             // Apply theme classes based on current body theme
             span.className = `px-5 py-2 rounded-full text-base font-medium shadow-sm flex items-center transition-colors duration-200 cursor-default ${document.body.classList.contains('dark') ? 'bg-indigo-700 text-indigo-100 hover:bg-indigo-600' : 'bg-indigo-100 text-indigo-800 hover:bg-indigo-200'}`;
             span.textContent = header;
-            headersDisplay.appendChild(span);
+            headersDisplayElem.appendChild(span);
         });
     } else {
-        headersDisplay.textContent = 'No headers found in the first row.';
-        headersDisplay.classList.add('text-gray-500', 'dark:text-gray-400', 'text-sm');
+        headersDisplayElem.textContent = 'No headers found in the first row.';
+        headersDisplayElem.classList.add('text-gray-500', 'dark:text-gray-400', 'text-sm');
     }
 }
 
 /**
  * Sends a message to the content script to scan for form fields.
+ * @param {string} targetSection - 'autoFill' or 'fullAutomation'.
  */
-async function scanCurrentTabFields() {
+async function scanCurrentTabFields(targetSection) {
+    const scanMessageElem = targetSection === 'autoFill' ? scanMessageAutoFill : scanMessageFullAutomation;
+    const scanFieldsButtonElem = targetSection === 'autoFill' ? scanFieldsButtonAutoFill : scanFieldsButtonFullAutomation;
+    const fieldMappingSectionElem = targetSection === 'autoFill' ? fieldMappingSectionAutoFill : fieldMappingSectionFullAutomation;
+
     if (!headers || headers.length === 0) {
-        displayMessage(scanMessage, '<i class="fas fa-exclamation-triangle mr-2"></i>Please upload a file with headers first.', 'error', true);
+        displayMessage(scanMessageElem, '<i class="fas fa-exclamation-triangle mr-2"></i>Please upload a file with headers first.', 'error', true);
         return;
     }
 
-    displayMessage(scanMessage, '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning current tab for fields...', 'info', true);
-    scanFieldsButton.disabled = true; // Disable button during scan
-    scanFieldsButton.innerHTML = 'Scanning... <span class="loading-spinner"></span>';
+    displayMessage(scanMessageElem, '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning current tab for fields...', 'info', true);
+    scanFieldsButtonElem.disabled = true; // Disable button during scan
+    scanFieldsButtonElem.innerHTML = 'Scanning... <span class="loading-spinner"></span>';
 
     try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (!tab) {
-            displayMessage(scanMessage, 'Could not get active tab.', 'error', false);
+            displayMessage(scanMessageElem, 'Could not get active tab.', 'error', false);
             return;
         }
 
@@ -487,25 +572,25 @@ async function scanCurrentTabFields() {
             availableFormFields = response.fields;
             if (availableFormFields.length > 0) {
                 groupedFormFields = groupFieldsBySignature(availableFormFields); // Use smarter grouping
-                setupFieldMapping(groupedFormFields, headers); // Call existing setup to build UI with grouped fields
-                autoMapFields(groupedFormFields, headers); // Call auto-map to pre-select dropdowns for groups
-                fieldMappingSection.classList.remove('hidden');
-                displayMessage(scanMessage, `<i class="fas fa-check-circle mr-2"></i>Found ${availableFormFields.length} fields on the page, grouped into ${Object.keys(groupedFormFields).length} sections. Attempting auto-mapping.`, 'success', true);
+                setupFieldMapping(groupedFormFields, headers, targetSection); // Call existing setup to build UI with grouped fields
+                autoMapFields(groupedFormFields, headers, targetSection); // Call auto-map to pre-select dropdowns for groups
+                fieldMappingSectionElem.classList.remove('hidden');
+                displayMessage(scanMessageElem, `<i class="fas fa-check-circle mr-2"></i>Found ${availableFormFields.length} fields on the page, grouped into ${Object.keys(groupedFormFields).length} sections. Attempting auto-mapping.`, 'success', true);
             } else {
-                fieldMappingSection.classList.add('hidden');
-                displayMessage(scanMessage, '<i class="fas fa-info-circle mr-2"></i>No input fields found on the current tab.', 'info', true);
+                fieldMappingSectionElem.classList.add('hidden');
+                displayMessage(scanMessageElem, '<i class="fas fa-info-circle mr-2"></i>No input fields found on the current tab.', 'info', true);
             }
         } else {
-            fieldMappingSection.classList.add('hidden');
-            displayMessage(scanMessage, '<i class="fas fa-exclamation-triangle mr-2"></i>Failed to get fields from the current tab. Ensure content script can run.', 'error', true);
+            fieldMappingSectionElem.classList.add('hidden');
+            displayMessage(scanMessageElem, '<i class="fas fa-exclamation-triangle mr-2"></i>Failed to get fields from the current tab. Ensure content script can run.', 'error', true);
         }
     } catch (error) {
         console.error("Error scanning fields:", error);
-        displayMessage(scanMessage, `<i class="fas fa-exclamation-triangle mr-2"></i>Error scanning fields: ${error.message}.`, 'error', true);
-        fieldMappingSection.classList.add('hidden');
+        displayMessage(scanMessageElem, `<i class="fas fa-exclamation-triangle mr-2"></i>Error scanning fields: ${error.message}.`, 'error', true);
+        fieldMappingSectionElem.classList.add('hidden');
     } finally {
-        scanFieldsButton.disabled = false;
-        scanFieldsButton.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Scan Current Tab for Fields';
+        scanFieldsButtonElem.disabled = false;
+        scanFieldsButtonElem.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Scan Current Tab for Fields';
     }
 }
 
@@ -556,18 +641,20 @@ function groupFieldsBySignature(formFields) {
  * Sets up the mapping section with dropdowns for each grouped form field context.
  * @param {Object} groupedFields - Object of grouped fields (e.g., { 'Context A': [field1, field2], 'Context B': [field3] }).
  * @param {string[]} headersArray - Array of header strings for dropdown options.
+ * @param {string} targetSection - 'autoFill' or 'fullAutomation'.
  */
-function setupFieldMapping(groupedFields, headersArray) {
-    mappingContainer.innerHTML = ''; // Clear previous mappings
+function setupFieldMapping(groupedFields, headersArray, targetSection) {
+    const mappingContainerElem = targetSection === 'autoFill' ? mappingContainerAutoFill : mappingContainerFullAutomation;
+    mappingContainerElem.innerHTML = ''; // Clear previous mappings
 
     const groupKeys = Object.keys(groupedFields);
     if (groupKeys.length === 0) {
-        mappingContainer.textContent = 'No mappable field groups found on the page.';
-        mappingContainer.classList.add('text-gray-500', 'dark:text-gray-400', 'text-sm');
+        mappingContainerElem.textContent = 'No mappable field groups found on the page.';
+        mappingContainerElem.classList.add('text-gray-500', 'dark:text-gray-400', 'text-sm');
         return;
     }
     // Remove informational text if there are groups to display
-    mappingContainer.classList.remove('text-gray-500', 'dark:text-gray-400', 'text-sm');
+    mappingContainerElem.classList.remove('text-gray-500', 'dark:text-gray-400', 'text-sm');
 
     groupKeys.forEach(contextKey => {
         const fieldsInGroup = groupedFields[contextKey];
@@ -623,18 +710,18 @@ function setupFieldMapping(groupedFields, headersArray) {
         groupControl.appendChild(select);
         mappingGroupItem.appendChild(groupControl);
 
-        mappingContainer.appendChild(mappingGroupItem);
+        mappingContainerElem.appendChild(mappingGroupItem);
 
         // Event listener for group checkbox: enables/disables the select dropdown
         checkbox.addEventListener('change', (e) => {
-            const currentSelect = mappingContainer.querySelector(`.group-mapper[data-context-key="${e.target.dataset.contextKey}"]`);
+            const currentSelect = mappingContainerElem.querySelector(`.group-mapper[data-context-key="${e.target.dataset.contextKey}"]`);
             currentSelect.disabled = !e.target.checked;
             if (!e.target.checked) {
                 currentSelect.value = ''; // Reset selection if unchecked
                 removeAutoMappedBadge(groupHeader); // Remove badge when unchecked
             } else {
                 // If re-checked, try auto-mapping again for visual consistency (e.g., if user changed it manually and then re-enabled)
-                autoMapFields(groupedFields, headersArray); 
+                autoMapFields(groupedFields, headersArray, targetSection); 
             }
         });
 
@@ -657,14 +744,18 @@ function setupFieldMapping(groupedFields, headersArray) {
  * Populates the mapping dropdowns and checks the corresponding checkboxes for groups.
  * @param {Object} groupedFields - Object of grouped fields.
  * @param {string[]} headersArray - Array of header strings.
+ * @param {string} targetSection - 'autoFill' or 'fullAutomation'.
  */
-async function autoMapFields(groupedFields, headersArray) {
+async function autoMapFields(groupedFields, headersArray, targetSection) {
+    const scanMessageElem = targetSection === 'autoFill' ? scanMessageAutoFill : scanMessageFullAutomation;
+    const mappingContainerElem = targetSection === 'autoFill' ? mappingContainerAutoFill : mappingContainerFullAutomation;
+
     await loadLearnedMappings(); // Ensure learned mappings are loaded first
 
     // Guard against empty headers array for Fuse.js initialization
     if (!headersArray || headersArray.length === 0) {
         console.warn("Headers array is empty, cannot perform auto-mapping.");
-        displayMessage(scanMessage, '<i class="fas fa-info-circle mr-2"></i>Cannot auto-map: No headers found in the uploaded file.', 'info', true);
+        displayMessage(scanMessageElem, '<i class="fas fa-info-circle mr-2"></i>Cannot auto-map: No headers found in the uploaded file.', 'info', true);
         return;
     }
 
@@ -679,8 +770,8 @@ async function autoMapFields(groupedFields, headersArray) {
 
     let autoMappedCount = 0;
     Object.keys(groupedFields).forEach(contextKey => {
-        const checkbox = mappingContainer.querySelector(`.group-checkbox[data-context-key="${contextKey}"]`);
-        const select = mappingContainer.querySelector(`.group-mapper[data-context-key="${contextKey}"]`);
+        const checkbox = mappingContainerElem.querySelector(`.group-checkbox[data-context-key="${contextKey}"]`);
+        const select = mappingContainerElem.querySelector(`.group-mapper[data-context-key="${contextKey}"]`);
         const groupHeaderElement = checkbox.closest('.field-mapping-group-item').querySelector('h3');
 
         if (!checkbox || !select) return; // Skip if elements not found
@@ -719,7 +810,7 @@ async function autoMapFields(groupedFields, headersArray) {
         updateBadgeForGroup(groupHeaderElement, mappedType, mappedType === 'fuzzy' ? result.score.toFixed(2) : '');
     });
     // Display overall auto-mapping success message
-    displayMessage(scanMessage, `<i class="fas fa-check-circle mr-2"></i>Auto-mapping complete. ${autoMappedCount} fields auto-mapped. Review and adjust if needed.`, 'success', true);
+    displayMessage(scanMessageElem, `<i class="fas fa-check-circle mr-2"></i>Auto-mapping complete. ${autoMappedCount} fields auto-mapped. Review and adjust if needed.`, 'success', true);
 }
 
 /**
@@ -783,13 +874,16 @@ function removeAutoMappedBadge(groupHeaderElement) {
  */
 async function saveLearnedMappings() {
     const currentMappings = {};
-    mappingContainer.querySelectorAll('.group-checkbox:checked').forEach(checkbox => {
-        const contextKey = checkbox.dataset.contextKey;
-        const selectElement = mappingContainer.querySelector(`.group-mapper[data-context-key="${contextKey}"]`);
-        const mappedColumnHeader = selectElement ? selectElement.value : '';
-        if (mappedColumnHeader) {
-            currentMappings[contextKey] = mappedColumnHeader;
-        }
+    // Iterate over both autoFill and fullAutomation mapping containers
+    [mappingContainerAutoFill, mappingContainerFullAutomation].forEach(container => {
+        container.querySelectorAll('.group-checkbox:checked').forEach(checkbox => {
+            const contextKey = checkbox.dataset.contextKey;
+            const selectElement = container.querySelector(`.group-mapper[data-context-key="${contextKey}"]`);
+            const mappedColumnHeader = selectElement ? selectElement.value : '';
+            if (mappedColumnHeader) {
+                currentMappings[contextKey] = mappedColumnHeader;
+            }
+        });
     });
 
     try {
@@ -797,9 +891,12 @@ async function saveLearnedMappings() {
         console.log('Learned mappings saved:', currentMappings);
         // After saving, re-run autoMapFields to update badges based on newly learned mappings
         if (Object.keys(groupedFormFields).length > 0 && headers.length > 0) {
-            autoMapFields(groupedFormFields, headers); // This will update "learned" badges
+            // This will ensure badges are updated across both tabs if necessary
+            autoMapFields(groupedFormFields, headers, 'autoFill'); 
+            autoMapFields(groupedFormFields, headers, 'fullAutomation');
         }
-    } catch (error) {
+    }
+    catch (error) {
         console.error('Error saving learned mappings:', error);
     }
 }
@@ -819,28 +916,33 @@ async function loadLearnedMappings() {
 
 /**
  * Sends a message to the content script to fill the fields on the active tab.
+ * @param {string} targetSection - 'autoFill' or 'fullAutomation'.
  * This function now iterates through spreadsheet rows and prepares a batch for filling.
- * @param {boolean} isAutoFill - True if triggered by the "One-Click Autofill" button (implies auto-mapping first).
  */
-async function fillDataInTab() {
+async function fillDataInTab(targetSection) {
+    const fillDataMessageElem = targetSection === 'autoFill' ? fillDataMessageAutoFill : fullAutomationMessage; // Use fullAutomationMessage for fullAutomation section
+    const fillDataButtonElem = targetSection === 'autoFill' ? fillDataButtonAutoFill : startFullAutomationButton; // For disabling
+    const fillEmptyOnlyCheckboxElem = targetSection === 'autoFill' ? fillEmptyOnlyCheckboxAutoFill : fillEmptyOnlyCheckboxFullAutomation;
+    const mappingContainerElem = targetSection === 'autoFill' ? mappingContainerAutoFill : mappingContainerFullAutomation;
+
     if (!workbook || sheetData.length <= 1) { // sheetData includes headers, so >1 means actual data rows
-        displayMessage(fillDataMessage, '<i class="fas fa-exclamation-triangle mr-2"></i>Please upload a spreadsheet file first.', 'error', true);
+        displayMessage(fillDataMessageElem, '<i class="fas fa-exclamation-triangle mr-2"></i>Please upload a spreadsheet file first.', 'error', true);
         return;
     }
     if (Object.keys(groupedFormFields).length === 0) {
-        displayMessage(fillDataMessage, '<i class="fas fa-exclamation-triangle mr-2"></i>Please scan for fields on the current tab first.', 'error', true);
+        displayMessage(fillDataMessageElem, '<i class="fas fa-exclamation-triangle mr-2"></i>Please scan for fields on the current tab first.', 'error', true);
         return;
     }
 
     const actualDataRows = sheetData.slice(1); // Get data rows, excluding headers
 
-    const fillEmptyOnly = fillEmptyOnlyCheckbox.checked;
+    const fillEmptyOnly = fillEmptyOnlyCheckboxElem.checked;
     
     // Collect all selected mappings: { contextKey: mappedColumnHeader }
     const selectedMappings = {};
-    mappingContainer.querySelectorAll('.group-checkbox:checked').forEach(checkbox => {
+    mappingContainerElem.querySelectorAll('.group-checkbox:checked').forEach(checkbox => {
         const contextKey = checkbox.dataset.contextKey;
-        const selectElement = mappingContainer.querySelector(`.group-mapper[data-context-key="${contextKey}"]`);
+        const selectElement = mappingContainerElem.querySelector(`.group-mapper[data-context-key="${contextKey}"]`);
         const mappedColumnHeader = selectElement ? selectElement.value : '';
         if (mappedColumnHeader) {
             selectedMappings[contextKey] = mappedColumnHeader;
@@ -848,21 +950,26 @@ async function fillDataInTab() {
     });
 
     if (Object.keys(selectedMappings).length === 0) {
-        displayMessage(fillDataMessage, '<i class="fas fa-info-circle mr-2"></i>No fields selected for filling or no column mapped to selected groups.', 'error', true);
+        displayMessage(fillDataMessageElem, '<i class="fas fa-info-circle mr-2"></i>No fields selected for filling or no column mapped to selected groups.', 'error', true);
         return;
     }
 
-    displayMessage(fillDataMessage, '<i class="fas fa-spinner fa-spin mr-2"></i>Preparing data for filling...', 'info', true);
+    displayMessage(fillDataMessageElem, '<i class="fas fa-spinner fa-spin mr-2"></i>Preparing data for filling...', 'info', true);
     // Disable buttons to prevent multiple submissions
-    fillDataButton.disabled = true;
-    fillDataButton.innerHTML = 'Filling... <span class="loading-spinner"></span>';
-    testFillButton.disabled = true;
-    previewValuesButton.disabled = true;
+    fillDataButtonElem.disabled = true;
+    fillDataButtonElem.innerHTML = 'Filling... <span class="loading-spinner"></span>';
+    
+    // Only disable test/preview buttons if in autofill section
+    if (targetSection === 'autoFill') {
+        testFillButtonAutoFill.disabled = true;
+        previewValuesButtonAutoFill.disabled = true;
+    }
+
 
     try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (!tab) {
-            displayMessage(fillDataMessage, 'Could not get active tab.', 'error', false);
+            displayMessage(fillDataMessageElem, 'Could not get active tab.', 'error', false);
             return;
         }
 
@@ -901,11 +1008,11 @@ async function fillDataInTab() {
         });
 
         if (dataBatch.length === 0) {
-            displayMessage(fillDataMessage, '<i class="fas fa-info-circle mr-2"></i>No data prepared for filling based on current mappings and spreadsheet data. Check your mappings and file content.', 'info', true);
+            displayMessage(fillDataMessageElem, '<i class="fas fa-info-circle mr-2"></i>No data prepared for filling based on current mappings and spreadsheet data. Check your mappings and file content.', 'info', true);
             return;
         }
 
-        displayMessage(fillDataMessage, `<i class="fas fa-paper-plane mr-2"></i>Sending ${dataBatch.length} fields for filling...`, 'info', true);
+        displayMessage(fillDataMessageElem, `<i class="fas fa-paper-plane mr-2"></i>Sending ${dataBatch.length} fields for filling...`, 'info', true);
 
         // Send the entire prepared batch to the content script for filling
         const response = await chrome.tabs.sendMessage(tab.id, {
@@ -915,51 +1022,61 @@ async function fillDataInTab() {
         });
 
         if (response && response.status === 'success') {
-            displayMessage(fillDataMessage, `<i class="fas fa-check-circle mr-2"></i>Data filling complete! ${response.filledCount} fields filled, ${response.skippedCount} fields skipped.`, 'success', true);
+            displayMessage(fillDataMessageElem, `<i class="fas fa-check-circle mr-2"></i>Data filling complete! ${response.filledCount} fields filled, ${response.skippedCount} fields skipped.`, 'success', true);
             saveLearnedMappings(); // Save successful mappings for future use
         } else {
             console.error(`Error filling data: ${response?.message || 'Unknown error.'}`);
-            displayMessage(fillDataMessage, `<i class="fas fa-exclamation-triangle mr-2"></i>Error filling data: ${response?.message || 'Unknown error.'}`, "error", true);
+            displayMessage(fillDataMessageElem, `<i class="fas fa-exclamation-triangle"></i>Error filling data: ${response?.message || 'Unknown error.'}`, "error", true);
         }
 
     } catch (error) {
         console.error("Error filling data:", error);
-        displayMessage(fillDataMessage, `<i class="fas fa-exclamation-triangle mr-2"></i>Error filling data: ${error.message}.`, 'error', true);
+        displayMessage(fillDataMessageElem, `<i class="fas fa-exclamation-triangle"></i>Error filling data: ${error.message}.`, 'error', true);
     } finally {
         // Re-enable buttons regardless of success or failure
-        fillDataButton.disabled = false;
-        fillDataButton.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Fill Data';
-        testFillButton.disabled = false;
-        previewValuesButton.disabled = false;
+        fillDataButtonElem.disabled = false;
+        fillDataButtonElem.innerHTML = targetSection === 'autoFill' ? '<i class="fas fa-paper-plane mr-2"></i>Fill Data' : '<i class="fas fa-play mr-2"></i>Start Full Automation';
+        
+        if (targetSection === 'autoFill') {
+            testFillButtonAutoFill.disabled = false;
+            previewValuesButtonAutoFill.disabled = false;
+        }
     }
 }
 
 /**
  * Fills only the first row of data for testing purposes.
+ * @param {string} targetSection - 'autoFill' or 'fullAutomation'.
  */
-async function testFillFirstRow() {
+async function testFillFirstRow(targetSection) {
+    const testFillMessageElem = targetSection === 'autoFill' ? testFillMessageAutoFill : fullAutomationMessage; // Using fullAutomationMessage for this for now, though it's typically for AutoFill
+    const testFillButtonElem = targetSection === 'autoFill' ? testFillButtonAutoFill : null; // Only exists in AutoFill tab
+    const fillEmptyOnlyCheckboxElem = targetSection === 'autoFill' ? fillEmptyOnlyCheckboxAutoFill : fillEmptyOnlyCheckboxFullAutomation;
+    const mappingContainerElem = targetSection === 'autoFill' ? mappingContainerAutoFill : mappingContainerFullAutomation;
+
+
     if (!workbook || sheetData.length <= 1) {
-        displayMessage(testFillMessage, '<i class="fas fa-exclamation-triangle mr-2"></i>Please upload a spreadsheet file with data first.', 'error', true);
+        displayMessage(testFillMessageElem, '<i class="fas fa-exclamation-triangle mr-2"></i>Please upload a spreadsheet file with data first.', 'error', true);
         return;
     }
     if (Object.keys(groupedFormFields).length === 0) {
-        displayMessage(testFillMessage, '<i class="fas fa-exclamation-triangle mr-2"></i>Please scan for fields on the current tab first.', 'error', true);
+        displayMessage(testFillMessageElem, '<i class="fas fa-exclamation-triangle mr-2"></i>Please scan for fields on the current tab first.', 'error', true);
         return;
     }
 
     const firstDataRow = sheetData[1]; // Get the first data row (index 1 after headers)
     if (!firstDataRow) {
-        displayMessage(testFillMessage, '<i class="fas fa-info-circle mr-2"></i>No data rows found in the spreadsheet for testing.', 'error', true);
+        displayMessage(testFillMessageElem, '<i class="fas fa-info-circle mr-2"></i>No data rows found in the spreadsheet for testing.', 'error', true);
         return;
     }
 
-    const fillEmptyOnly = fillEmptyOnlyCheckbox.checked;
+    const fillEmptyOnly = fillEmptyOnlyCheckboxElem.checked;
     const dataToFillForFirstRow = [];
 
     const selectedMappings = {};
-    mappingContainer.querySelectorAll('.group-checkbox:checked').forEach(checkbox => {
+    mappingContainerElem.querySelectorAll('.group-checkbox:checked').forEach(checkbox => {
         const contextKey = checkbox.dataset.contextKey;
-        const selectElement = mappingContainer.querySelector(`.group-mapper[data-context-key="${contextKey}"]`);
+        const selectElement = mappingContainerElem.querySelector(`.group-mapper[data-context-key="${contextKey}"]`);
         const mappedColumnHeader = selectElement ? selectElement.value : '';
         if (mappedColumnHeader) {
             selectedMappings[contextKey] = mappedColumnHeader;
@@ -967,7 +1084,7 @@ async function testFillFirstRow() {
     });
 
     if (Object.keys(selectedMappings).length === 0) {
-        displayMessage(testFillMessage, '<i class="fas fa-info-circle mr-2"></i>No fields selected for test filling or no column mapped.', 'error', true);
+        displayMessage(testFillMessageElem, '<i class="fas fa-info-circle mr-2"></i>No fields selected for test filling or no column mapped.', 'error', true);
         return;
     }
 
@@ -992,18 +1109,21 @@ async function testFillFirstRow() {
     }
 
     if (dataToFillForFirstRow.length === 0) {
-        displayMessage(testFillMessage, '<i class="fas fa-info-circle mr-2"></i>No data prepared for test filling based on current mappings and first spreadsheet row. Check your mappings.', 'info', true);
+        displayMessage(testFillMessageElem, '<i class="fas fa-info-circle mr-2"></i>No data prepared for test filling based on current mappings and first spreadsheet row. Check your mappings.', 'info', true);
         return;
     }
 
-    displayMessage(testFillMessage, '<i class="fas fa-spinner fa-spin mr-2"></i>Performing test fill for the first row...', 'info', true);
-    testFillButton.disabled = true;
-    testFillButton.innerHTML = 'Testing... <span class="loading-spinner"></span>';
+    displayMessage(testFillMessageElem, '<i class="fas fa-spinner fa-spin mr-2"></i>Performing test fill for the first row...', 'info', true);
+    if (testFillButtonElem) { // Ensure button exists for autoFill section
+        testFillButtonElem.disabled = true;
+        testFillButtonElem.innerHTML = 'Testing... <span class="loading-spinner"></span>';
+    }
+
 
     try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (!tab) {
-            displayMessage(testFillMessage, 'Could not get active tab.', 'error', false);
+            displayMessage(testFillMessageElem, 'Could not get active tab.', 'error', false);
             return;
         }
 
@@ -1014,44 +1134,50 @@ async function testFillFirstRow() {
         });
 
         if (response && response.status === 'success') {
-            displayMessage(testFillMessage, `<i class="fas fa-check-circle mr-2"></i>Test fill complete! ${response.filledCount} fields filled, ${response.skippedCount} fields skipped for the first row.`, 'success', true);
+            displayMessage(testFillMessageElem, `<i class="fas fa-check-circle mr-2"></i>Test fill complete! ${response.filledCount} fields filled, ${response.skippedCount} fields skipped for the first row.`, 'success', true);
         } else {
             console.error(`Error during test fill: ${response?.message || 'Unknown error.'}`);
-            displayMessage(testFillMessage, `<i class="fas fa-exclamation-triangle mr-2"></i>Error during test fill: ${response?.message || 'Unknown error.'}`, "error", true);
+            displayMessage(testFillMessageElem, `<i class="fas fa-exclamation-triangle"></i>Error during test fill: ${response?.message || 'Unknown error.'}`, "error", true);
         }
 
     } catch (error) {
         console.error("Error during test fill:", error);
-        displayMessage(testFillMessage, `<i class="fas fa-exclamation-triangle mr-2"></i>Error during test fill: ${error.message}.`, 'error', true);
+        displayMessage(testFillMessageElem, `<i class="fas fa-exclamation-triangle"></i>Error during test fill: ${error.message}.`, 'error', true);
     } finally {
-        testFillButton.disabled = false;
-        testFillButton.innerHTML = '<i class="fas fa-vial mr-2"></i>Test Fill First Row';
+        if (testFillButtonElem) {
+            testFillButtonElem.disabled = false;
+            testFillButtonElem.innerHTML = '<i class="fas fa-vial mr-2"></i>Test Fill First Row';
+        }
     }
 }
 
 /**
  * Displays a preview of mapped values for the first data row.
+ * @param {string} targetSection - 'autoFill' or 'fullAutomation'.
  */
-function previewMappedValues() {
+function previewMappedValues(targetSection) {
+    const previewValuesMessageElem = targetSection === 'autoFill' ? previewValuesMessageAutoFill : fullAutomationMessage; // Using fullAutomationMessage for this for now.
+    const mappingContainerElem = targetSection === 'autoFill' ? mappingContainerAutoFill : mappingContainerFullAutomation;
+
     if (!workbook || sheetData.length <= 1) {
-        displayMessage(previewValuesMessage, '<i class="fas fa-exclamation-triangle mr-2"></i>Please upload a spreadsheet file with data first.', 'error', true);
+        displayMessage(previewValuesMessageElem, '<i class="fas fa-exclamation-triangle mr-2"></i>Please upload a spreadsheet file with data first.', 'error', true);
         return;
     }
     if (Object.keys(groupedFormFields).length === 0) {
-        displayMessage(previewValuesMessage, '<i class="fas fa-exclamation-triangle mr-2"></i>Please scan for fields on the current tab first.', 'error', true);
+        displayMessage(previewValuesMessageElem, '<i class="fas fa-exclamation-triangle mr-2"></i>Please scan for fields on the current tab first.', 'error', true);
         return;
     }
 
     const firstDataRow = sheetData[1];
     if (!firstDataRow) {
-        displayMessage(previewValuesMessage, '<i class="fas fa-info-circle mr-2"></i>No data rows found in the spreadsheet for preview.', 'info', true);
+        displayMessage(previewValuesMessageElem, '<i class="fas fa-info-circle mr-2"></i>No data rows found in the spreadsheet for preview.', 'info', true);
         return;
     }
 
     const selectedMappings = {};
-    mappingContainer.querySelectorAll('.group-checkbox:checked').forEach(checkbox => {
+    mappingContainerElem.querySelectorAll('.group-checkbox:checked').forEach(checkbox => {
         const contextKey = checkbox.dataset.contextKey;
-        const selectElement = mappingContainer.querySelector(`.group-mapper[data-context-key="${contextKey}"]`);
+        const selectElement = mappingContainerElem.querySelector(`.group-mapper[data-context-key="${contextKey}"]`);
         const mappedColumnHeader = selectElement ? selectElement.value : '';
         if (mappedColumnHeader) {
             selectedMappings[contextKey] = mappedColumnHeader;
@@ -1059,7 +1185,7 @@ function previewMappedValues() {
     });
 
     if (Object.keys(selectedMappings).length === 0) {
-        displayMessage(previewValuesMessage, '<i class="fas fa-info-circle mr-2"></i>No fields selected for preview or no column mapped.', 'info', true);
+        displayMessage(previewValuesMessageElem, '<i class="fas fa-info-circle mr-2"></i>No fields selected for preview or no column mapped.', 'info', true);
         return;
     }
 
@@ -1087,9 +1213,9 @@ function previewMappedValues() {
     previewHtml += '</ul>';
 
     if (hasPreviewData) {
-        displayMessage(previewValuesMessage, previewHtml, 'info', true); // Pass true for raw HTML
+        displayMessage(previewValuesMessageElem, previewHtml, 'info', true); // Pass true for raw HTML
     } else {
-        displayMessage(previewValuesMessage, '<i class="fas fa-info-circle mr-2"></i>No preview data available based on current selections. Select some fields and map columns.', 'info', true);
+        displayMessage(previewValuesMessageElem, '<i class="fas fa-info-circle mr-2"></i>No preview data available based on current selections. Select some fields and map columns.', 'info', true);
     }
 }
 
@@ -1119,7 +1245,7 @@ function displayMessage(element, message, type, isHtml = false) {
     }
 
     // Set a timeout to hide the message, with a longer duration for preview messages
-    const duration = element.id === 'previewValuesMessage' ? 10000 : 5000;
+    const duration = element.id && element.id.includes('previewValuesMessage') ? 10000 : 5000;
     setTimeout(() => {
         element.classList.add('hidden');
         element.innerHTML = ''; // Clear content when hidden
@@ -1131,14 +1257,16 @@ function displayMessage(element, message, type, isHtml = false) {
  * This is a specialized version of displayMessage for the file upload status.
  * @param {string} message - The message content (can be HTML if isHtml is true).
  * @param {'success'|'error'|'info'} type - The type of message for styling.
- * @param {HTMLElement} element - The specific element to display the message (e.g., fileStatusMessage)
+ * @param {HTMLElement} element - The specific message container element (e.g., fileStatusMessageAutoFill).
+ * @param {HTMLElement} messageSpan - The span element inside the container for text (e.g., fileMessageAutoFill).
+ * @param {HTMLElement} iconElem - The icon element inside the container (e.g., fileStatusIconAutoFill).
  * @param {boolean} isHtml - If true, message is parsed as HTML; otherwise, as plain text.
  */
-function displayFileStatusMessage(message, type, element, isHtml = false) {
+function displayFileStatusMessage(message, type, element, messageSpan, iconElem, isHtml = false) {
     if (isHtml) {
-        fileMessage.innerHTML = message;
+        messageSpan.innerHTML = message;
     } else {
-        fileMessage.textContent = message;
+        messageSpan.textContent = message;
     }
 
     element.classList.remove('hidden');
@@ -1147,11 +1275,11 @@ function displayFileStatusMessage(message, type, element, isHtml = false) {
 
     // Set icon based on message type
     if (type === 'success') {
-        fileStatusIcon.className = 'fas fa-check-circle text-xl mr-3';
+        iconElem.className = 'fas fa-check-circle text-xl mr-3';
     } else if (type === 'error') {
-        fileStatusIcon.className = 'fas fa-exclamation-circle text-xl mr-3';
+        iconElem.className = 'fas fa-exclamation-circle text-xl mr-3';
     } else if (type === 'info') {
-        fileStatusIcon.className = 'fas fa-spinner fa-spin text-xl mr-3';
+        iconElem.className = 'fas fa-spinner fa-spin text-xl mr-3';
     }
 
     // Apply dark mode class if body is dark
@@ -1164,7 +1292,180 @@ function displayFileStatusMessage(message, type, element, isHtml = false) {
     // Hide after 5 seconds (standard duration for file status)
     setTimeout(() => {
         element.classList.add('hidden');
-        fileMessage.innerHTML = ''; // Clear content when hidden
-        fileStatusIcon.className = ''; // Clear icon
+        messageSpan.innerHTML = ''; // Clear content when hidden
+        iconElem.className = ''; // Clear icon
     }, 5000); 
+}
+
+/**
+ * Initiates the full automation process: clicks "add new finding" then fills data.
+ */
+async function startFullAutomation() {
+    // Reference elements for full automation section
+    const messageElem = fullAutomationMessage;
+    const buttonElem = startFullAutomationButton;
+    const mappingContainerElem = mappingContainerFullAutomation;
+    const fillEmptyOnlyCheckboxElem = fillEmptyOnlyCheckboxFullAutomation;
+
+    // 1. Initial Checks and UI State
+    if (!workbook || sheetData.length <= 1) {
+        displayMessage(messageElem, '<i class="fas fa-exclamation-triangle mr-2"></i>Please upload a spreadsheet file with data first.', 'error', true);
+        return;
+    }
+    if (Object.keys(groupedFormFields).length === 0) {
+        displayMessage(messageElem, '<i class="fas fa-exclamation-triangle mr-2"></i>Please scan for fields on the current tab first and map them.', 'error', true);
+        return;
+    }
+
+    // Disable buttons during operation
+    buttonElem.disabled = true;
+    buttonElem.innerHTML = 'Automating... <span class="loading-spinner"></span>';
+
+    displayMessage(messageElem, '<i class="fas fa-spinner fa-spin mr-2"></i>Starting full automation...', 'info', true);
+
+    // FIX: Use actualNonEmptyDataRowsCount for accurate click calculation
+    const actualDataRowsCount = actualNonEmptyDataRowsCount; // Number of non-empty data rows
+    if (actualDataRowsCount === 0) {
+        displayMessage(messageElem, '<i class="fas fa-info-circle mr-2"></i>No data rows found in the spreadsheet to automate.', 'info', true);
+        buttonElem.disabled = false;
+        buttonElem.innerHTML = '<i class="fas fa-play mr-2"></i>Start Full Automation';
+        return;
+    }
+
+    try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!tab) {
+            displayMessage(messageElem, 'Could not get active tab.', 'error', false);
+            return;
+        }
+
+        // Ensure content.js is injected
+        const loaded = await isContentScriptLoaded(tab.id);
+        if (!loaded) {
+            await chrome.scripting.executeScript({
+                target: { tabId: tab.id },
+                files: ['content.js']
+            });
+        }
+
+        // 2. Click "Add New Finding" Button (n-1 times where n is actualDataRowsCount)
+        const clicksNeeded = actualDataRowsCount - 1; 
+        
+        if (clicksNeeded > 0) {
+            displayMessage(messageElem, `<i class="fas fa-mouse-pointer fa-spin mr-2"></i>Scanning for "Add New Finding" button...`, 'info', true);
+            const clickableElementsResponse = await chrome.tabs.sendMessage(tab.id, { action: "scanClickables" });
+            const addFindingButton = clickableElementsResponse?.clickables?.find(btn =>
+                btn.text.toLowerCase().includes("add new finding")
+            );
+
+            if (!addFindingButton) {
+                displayMessage(messageElem, '<i class="fas fa-exclamation-triangle mr-2"></i>"Add New Finding" button not found. Please ensure it exists on the page.', 'error', true);
+                return;
+            }
+
+            displayMessage(messageElem, `<i class="fas fa-hourglass-half fa-spin mr-2"></i>Clicking "Add New Finding" ${clicksNeeded} time(s) to prepare rows...`, 'info', true);
+            const clickResponse = await chrome.tabs.sendMessage(tab.id, {
+                action: "performClick",
+                stableId: addFindingButton.stableId,
+                count: clicksNeeded
+            });
+
+            if (clickResponse?.status !== "success") {
+                displayMessage(messageElem, `<i class="fas fa-exclamation-triangle mr-2"></i>Failed to click "Add New Finding" button: ${clickResponse?.message || 'Unknown error.'}`, 'error', true);
+                return;
+            }
+            displayMessage(messageElem, `<i class="fas fa-check-circle mr-2"></i>Successfully clicked "Add New Finding" ${clicksNeeded} time(s).`, 'success', true);
+        } else {
+            displayMessage(messageElem, '<i class="fas fa-info-circle mr-2"></i>No additional clicks needed for "Add New Finding".', 'info', true);
+        }
+
+        // 3. Re-scan fields after clicks (to get newly added fields)
+        displayMessage(messageElem, '<i class="fas fa-sync-alt fa-spin mr-2"></i>Re-scanning page for all fields after adding new rows...', 'info', true);
+        const scanFieldsResponse = await chrome.tabs.sendMessage(tab.id, { action: 'scanFields' });
+
+        if (!scanFieldsResponse || !scanFieldsResponse.fields) {
+            displayMessage(messageElem, '<i class="fas fa-exclamation-triangle mr-2"></i>Failed to re-scan fields after clicking. Cannot proceed with data filling.', 'error', true);
+            return;
+        }
+
+        availableFormFields = scanFieldsResponse.fields;
+        groupedFormFields = groupFieldsBySignature(availableFormFields);
+        displayMessage(messageElem, `<i class="fas fa-check-circle mr-2"></i>Found ${availableFormFields.length} fields on the page.`, 'success', true);
+
+        // 4. Collect selected mappings from the UI (which should be updated by setupFieldMapping/autoMapFields)
+        const selectedMappings = {};
+        mappingContainerElem.querySelectorAll('.group-checkbox:checked').forEach(checkbox => {
+            const contextKey = checkbox.dataset.contextKey;
+            const selectElement = mappingContainerElem.querySelector(`.group-mapper[data-context-key="${contextKey}"]`);
+            const mappedColumnHeader = selectElement ? selectElement.value : '';
+            if (mappedColumnHeader) {
+                selectedMappings[contextKey] = mappedColumnHeader;
+            }
+        });
+
+        if (Object.keys(selectedMappings).length === 0) {
+            displayMessage(messageElem, '<i class="fas fa-info-circle mr-2"></i>No fields selected for filling or no column mapped to selected groups. Please review the "Map Fields" section.', 'error', true);
+            return;
+        }
+
+        // 5. Prepare and Fill Data for ALL rows
+        const dataBatch = [];
+        const fillEmptyOnly = fillEmptyOnlyCheckboxElem.checked; 
+
+        sheetData.slice(1).forEach((spreadsheetRow, rowIndex) => { // Iterate through all data rows (excluding header)
+            // Ensure we only process up to the actual number of non-empty data rows
+            if (rowIndex >= actualDataRowsCount) {
+                return; // Skip if this row is beyond the actual non-empty data rows
+            }
+            for (const contextKey in selectedMappings) {
+                const mappedColumnHeader = selectedMappings[contextKey];
+                const columnIndex = headers.indexOf(mappedColumnHeader);
+
+                if (columnIndex !== -1) {
+                    const fieldsInThisGroup = groupedFormFields[contextKey];
+                    // Target the Nth instance for the Nth spreadsheet row.
+                    // This is crucial for filling dynamically created form "rows".
+                    const targetField = fieldsInThisGroup[rowIndex]; 
+                    if (targetField) {
+                        const value = spreadsheetRow[columnIndex];
+                        dataBatch.push({
+                            id: targetField.id,
+                            value: (value !== undefined && value !== null) ? String(value) : ''
+                        });
+                    } else {
+                        console.warn(`No form field instance found for group "${contextKey}" at form row index ${rowIndex}. This spreadsheet row might not have a corresponding form field instance.`);
+                        displayMessage(messageElem, `<i class="fas fa-exclamation-triangle mr-2"></i>Warning: Form field instance for group "${contextKey}" at row ${rowIndex + 1} not found. Some data might not be filled.`, 'error', false);
+                    }
+                }
+            }
+        });
+
+        if (dataBatch.length === 0) {
+            displayMessage(messageElem, '<i class="fas fa-info-circle mr-2"></i>No data prepared for filling based on current mappings and spreadsheet data. Check your mappings and file content.', 'info', true);
+            return;
+        }
+
+        displayMessage(messageElem, `<i class="fas fa-paper-plane fa-spin mr-2"></i>Sending ${dataBatch.length} fields for filling across ${actualDataRowsCount} rows...`, 'info', true);
+
+        const fillResponse = await chrome.tabs.sendMessage(tab.id, {
+            action: 'fillBatch',
+            dataBatch: dataBatch,
+            fillEmptyOnly: fillEmptyOnly
+        });
+
+        if (fillResponse && fillResponse.status === 'success') {
+            displayMessage(messageElem, `<i class="fas fa-check-circle mr-2"></i>Full automation complete! ${fillResponse.filledCount} fields filled, ${fillResponse.skippedCount} fields skipped.`, 'success', true);
+            saveLearnedMappings(); // Save successful mappings
+        } else {
+            console.error(`Error during data filling: ${fillResponse?.message || 'Unknown error.'}`);
+            displayMessage(messageElem, `<i class="fas fa-exclamation-triangle"></i>Error during data filling: ${fillResponse?.message || 'Unknown error.'}`, "error", true);
+        }
+
+    } catch (error) {
+        console.error("Error during full automation:", error);
+        displayMessage(messageElem, `<i class="fas fa-exclamation-triangle"></i>Error during full automation: ${error.message}.`, 'error', true);
+    } finally {
+        buttonElem.disabled = false;
+        buttonElem.innerHTML = '<i class="fas fa-play mr-2"></i>Start Full Automation';
+    }
 }

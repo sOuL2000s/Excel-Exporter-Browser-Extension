@@ -34,6 +34,9 @@
             <button id="autoClickTab" class="tab-button">
                 <i class="fas fa-mouse-pointer mr-2"></i>Auto Click
             </button>
+            <button id="fullAutomationTab" class="tab-button">
+                <i class="fas fa-robot mr-2"></i>Full Automation
+            </button>
         </div>
 
         <!-- Auto Fill Section: For uploading spreadsheets and filling forms -->
@@ -45,79 +48,79 @@
                 <h3 class="card-heading text-md md:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3"><i class="fas fa-upload mr-2 text-blue-500"></i>1. Upload File</h3>
                 <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">Supported: <span class="font-medium text-gray-700 dark:text-gray-300">.XLS, .XLSX, .ODS, .CSV, .XLSM, .XLSB.</span></p>
                 
-                <div class="drop-area" id="drop-area">
+                <div class="drop-area" id="drop-area-autofill">
                     <!-- Hidden file input, triggered by the custom browse button -->
-                    <input type="file" id="fileInput" class="hidden" accept=".xls,.xlsx,.ods,.csv,.xlsm,.xlsb" />
-                    <p id="fileNameDisplay" class="text-gray-500 dark:text-gray-400 mb-1 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition duration-300 ease-in-out">
+                    <input type="file" id="fileInputAutoFill" class="hidden" accept=".xls,.xlsx,.ods,.csv,.xlsm,.xlsb" />
+                    <p id="fileNameDisplayAutoFill" class="text-gray-500 dark:text-gray-400 mb-1 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition duration-300 ease-in-out">
                         Drag & Drop your file here, or
                     </p>
                     <!-- New element for row count -->
-                    <p id="rowCountDisplay" class="text-gray-500 dark:text-gray-400 text-sm mb-4 hidden"></p>
-                    <label for="fileInput" class="browse-button">
+                    <p id="rowCountDisplayAutoFill" class="text-gray-500 dark:text-gray-400 text-sm mb-4 hidden"></p>
+                    <label for="fileInputAutoFill" class="browse-button">
                         Browse File
                     </label>
                 </div>
                 
                 <!-- File status message area -->
-                <div id="fileStatusMessage" class="file-status mt-4 hidden">
-                    <i id="fileStatusIcon" class="text-xl mr-3"></i>
-                    <span id="fileMessage" class="text-lg font-medium"></span>
+                <div id="fileStatusMessageAutoFill" class="file-status mt-4 hidden">
+                    <i id="fileStatusIconAutoFill" class="text-xl mr-3"></i>
+                    <span id="fileMessageAutoFill" class="text-lg font-medium"></span>
                 </div>
             </div>
 
             <!-- Step 2: Data Display & Field Mapping Card -->
-            <div id="dataDisplaySection" class="card hidden">
+            <div id="dataDisplaySectionAutoFill" class="card hidden">
                 <h3 class="card-heading text-md md:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3"><i class="fas fa-map-marker-alt mr-2 text-blue-500"></i>2. Map Fields</h3>
 
                 <div class="mb-4">
                     <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">File Headers:</h4>
-                    <div id="headersDisplay" class="headers-list">
+                    <div id="headersDisplayAutoFill" class="headers-list">
                         <!-- Spreadsheet headers will be displayed here dynamically -->
                     </div>
                 </div>
 
                 <!-- Scan fields button -->
-                <button id="scanFieldsButton" class="action-button emerald w-full mb-4">
+                <button id="scanFieldsButtonAutoFill" class="action-button emerald w-full mb-4">
                     <i class="fas fa-sync-alt mr-2"></i>Scan Current Tab for Fields
                 </button>
                 <!-- Message area for scan feedback -->
-                <div id="scanMessage" class="message-box mt-3 hidden"></div>
+                <div id="scanMessageAutoFill" class="message-box mt-3 hidden"></div>
 
                 <!-- Field Mapping Section (visible after scan) -->
-                <div id="fieldMappingSection" class="mt-4 hidden">
+                <div id="fieldMappingSectionAutoFill" class="mt-4 hidden">
                     <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Available Form Field Groups:</h4>
-                    <div id="mappingContainer">
+                    <div id="mappingContainerAutoFill">
                         <!-- Dynamic mapping dropdowns for each grouped field -->
                     </div>
                     <div class="flex items-center mt-4">
                         <label class="checkbox-label mr-3 text-sm">
-                            <input type="checkbox" id="fillEmptyOnlyCheckbox" class="mr-2">
+                            <input type="checkbox" id="fillEmptyOnlyCheckboxAutoFill" class="mr-2">
                             Fill only empty fields
                         </label>
                     </div>
 
                     <!-- Action buttons for testing and previewing -->
                     <div class="flex flex-col space-y-2 mt-4">
-                        <button id="testFillButton" class="action-button secondary w-full">
+                        <button id="testFillButtonAutoFill" class="action-button secondary w-full">
                             <i class="fas fa-vial mr-2"></i>Test Fill First Row
                         </button>
-                        <div id="testFillMessage" class="message-box mt-3 hidden"></div>
-                        <button id="previewValuesButton" class="action-button secondary w-full">
+                        <div id="testFillMessageAutoFill" class="message-box mt-3 hidden"></div>
+                        <button id="previewValuesButtonAutoFill" class="action-button secondary w-full">
                             <i class="fas fa-eye mr-2"></i>Preview Mapped Values
                         </button>
-                        <div id="previewValuesMessage" class="message-box mt-3 hidden"></div>
+                        <div id="previewValuesMessageAutoFill" class="message-box mt-3 hidden"></div>
                     </div>
                 </div>
                 
                 <!-- Main fill data buttons -->
                 <div class="flex flex-col space-y-3 mt-6">
-                    <button id="fillDataButton" class="action-button primary w-full">
+                    <button id="fillDataButtonAutoFill" class="action-button primary w-full">
                         <i class="fas fa-paper-plane mr-2"></i>Fill Data
                     </button>
                 </div>
                 
                 <!-- Message area for fill data feedback -->
-                <div id="fillDataMessage" class="message-box mt-3 hidden"></div>
+                <div id="fillDataMessageAutoFill" class="message-box mt-3 hidden"></div>
             </div>
         </section>
 
@@ -155,6 +158,75 @@
                 </button>
             </div>
         </section>
+
+        <!-- Full Automation Section: Combined functionality -->
+        <section id="fullAutomationSection" class="tab-content hidden">
+            <h2 class="section-heading text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700"><i class="fas fa-robot mr-2 text-emerald-500"></i>Full Automation</h2>
+            
+            <!-- Message area for full automation feedback -->
+            <div id="fullAutomationMessage" class="message-box mb-4 hidden"></div>
+
+            <!-- Step 1: Upload File Card (reusing structure, but separate elements) -->
+            <div class="card mb-6">
+                <h3 class="card-heading text-md md:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3"><i class="fas fa-upload mr-2 text-emerald-500"></i>1. Upload File</h3>
+                <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">Supported: <span class="font-medium text-gray-700 dark:text-gray-300">.XLS, .XLSX, .ODS, .CSV, .XLSM, .XLSB.</span></p>
+                
+                <div class="drop-area" id="drop-area-fullautomation">
+                    <input type="file" id="fileInputFullAutomation" class="hidden" accept=".xls,.xlsx,.ods,.csv,.xlsm,.xlsb" />
+                    <p id="fileNameDisplayFullAutomation" class="text-gray-500 dark:text-gray-400 mb-1 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition duration-300 ease-in-out">
+                        Drag & Drop your file here, or
+                    </p>
+                    <p id="rowCountDisplayFullAutomation" class="text-gray-500 dark:text-gray-400 text-sm mb-4 hidden"></p>
+                    <label for="fileInputFullAutomation" class="browse-button">
+                        Browse File
+                    </label>
+                </div>
+                
+                <div id="fileStatusMessageFullAutomation" class="file-status mt-4 hidden">
+                    <i id="fileStatusIconFullAutomation" class="text-xl mr-3"></i>
+                    <span id="fileMessageFullAutomation" class="text-lg font-medium"></span>
+                </div>
+            </div>
+
+            <!-- Step 2: Data Display & Field Mapping Card (reusing structure) -->
+            <div id="dataDisplaySectionFullAutomation" class="card hidden">
+                <h3 class="card-heading text-md md:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3"><i class="fas fa-map-marker-alt mr-2 text-emerald-500"></i>2. Map Fields</h3>
+
+                <div class="mb-4">
+                    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">File Headers:</h4>
+                    <div id="headersDisplayFullAutomation" class="headers-list">
+                        <!-- Spreadsheet headers will be displayed here dynamically -->
+                    </div>
+                </div>
+
+                <!-- Scan fields button -->
+                <button id="scanFieldsButtonFullAutomation" class="action-button secondary w-full mb-4">
+                    <i class="fas fa-sync-alt mr-2"></i>Scan Current Tab for Fields
+                </button>
+                <div id="scanMessageFullAutomation" class="message-box mt-3 hidden"></div>
+
+                <!-- Field Mapping Section (visible after scan) -->
+                <div id="fieldMappingSectionFullAutomation" class="mt-4 hidden">
+                    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Available Form Field Groups:</h4>
+                    <div id="mappingContainerFullAutomation">
+                        <!-- Dynamic mapping dropdowns for each grouped field -->
+                    </div>
+                    <div class="flex items-center mt-4">
+                        <label class="checkbox-label mr-3 text-sm">
+                            <input type="checkbox" id="fillEmptyOnlyCheckboxFullAutomation" class="mr-2">
+                            Fill only empty fields
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Start Full Automation Button -->
+            <div class="flex flex-col space-y-3 mt-6">
+                <button id="startFullAutomationButton" class="action-button primary w-full">
+                    <i class="fas fa-play mr-2"></i>Start Full Automation
+                </button>
+            </div>
+        </section>
     </div>
 
     <!-- SheetJS Library - NOW LOCAL -->
@@ -164,7 +236,7 @@
         // Global error handler for better debugging in the popup context
         window.onerror = function (msg, url, lineNo, columnNo, error) {
             console.error('Global Error (popup.html):', { msg, url, lineNo, columnNo, error });
-            const errorMessageElement = document.getElementById('fileStatusMessage') || document.getElementById('scanMessage') || document.getElementById('fillDataMessage') || document.getElementById('autoClickMessage');
+            const errorMessageElement = document.getElementById('fileStatusMessageAutoFill') || document.getElementById('scanMessageAutoFill') || document.getElementById('fillDataMessageAutoFill') || document.getElementById('autoClickMessage') || document.getElementById('fullAutomationMessage');
             if (errorMessageElement) {
                 // Display a user-friendly error message, avoiding specific internal details
                 errorMessageElement.innerHTML = `<i class="fas fa-exclamation-circle text-red-500 text-xl mr-3"></i><span class="text-lg font-medium">An unexpected error occurred. Please try again. If the issue persists, check the browser's console for more details.</span>`;
