@@ -12,15 +12,16 @@
   /* Primary Action Button (Blue) */
   --primary-button-bg-light: #2563eb; /* blue-600 */
   --primary-button-hover-bg-light: #1d4ed8; /* blue-700 */
-  --primary-button-shadow-light: 37, 99, 235; /* RGB for blue-600 */
+  --primary-button-border-light: #1e40af; /* Darker blue for subtle border */
 
   /* Secondary Action Button (Emerald for Scan, gray for general secondary) */
   --secondary-button-bg-light: #6b7280; /* gray-500 */
   --secondary-button-hover-bg-light: #4b5563; /* gray-600 */
+  --secondary-button-border-light: #4b5563;
   
   --emerald-button-bg-light: #059669; /* emerald-600 */
   --emerald-button-hover-bg-light: #047857; /* emerald-700 */
-  --emerald-button-shadow-light: 5, 150, 105; /* RGB for emerald-600 */
+  --emerald-button-border-light: #047857;
 
   --input-border-light: #d1d5db; /* gray-300 */
   --input-focus-ring-light: #60a5fa; /* blue-400 */
@@ -75,6 +76,32 @@
   --clickable-item-hover-bg: #f3f4f6; /* gray-100 */
   --selected-button-highlight-bg: #e0f2fe; /* blue-100 */
   --selected-button-highlight-border: #93c5fd; /* blue-300 */
+
+  /* New & Refined Shadows (Light Mode) */
+  --main-container-shadow-light: 
+    0 15px 30px -10px rgba(0, 0, 0, 0.15), /* Larger, softer base */
+    0 8px 15px -5px rgba(0, 0, 0, 0.1);    /* Deeper, more defined */
+  --card-shadow-light: 
+    0 6px 12px -4px rgba(0, 0, 0, 0.1), /* Slightly larger base for cards */
+    0 3px 6px -2px rgba(0, 0, 0, 0.08);   /* More defined top layer */
+
+  --primary-button-shadow-light: 
+    0 10px 20px -5px rgba(37, 99, 235, 0.4), /* Primary blue with strong, colored shadow */
+    0 4px 6px -2px rgba(37, 99, 235, 0.2);
+  --emerald-button-shadow-light: 
+    0 10px 20px -5px rgba(5, 150, 105, 0.4), /* Emerald with strong, colored shadow */
+    0 4px 6px -2px rgba(5, 150, 105, 0.2);
+  --secondary-button-shadow-light: 
+    0 8px 15px -4px rgba(107, 114, 128, 0.25), /* Gray with moderate shadow */
+    0 3px 5px -1px rgba(107, 114, 128, 0.1);
+
+  --tab-button-active-shadow-light: 
+    0 8px 16px rgba(0,0,0,0.15), 
+    0 4px 8px rgba(0,0,0,0.1);
+
+  --drop-area-inner-shadow-light: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+
+  --header-badge-shadow-light: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 /* Dark Mode Overrides (Default Light Mode values are above) */
@@ -87,14 +114,15 @@ body.dark {
 
   --primary-button-bg-dark: #4f46e5; /* indigo-600 */
   --primary-button-hover-bg-dark: #4338ca; /* indigo-700 */
-  --primary-button-shadow-dark: 79, 70, 229; /* RGB for indigo-600 */
+  --primary-button-border-dark: #3730a3; /* Darker indigo for subtle border */
 
   --secondary-button-bg-dark: #4a5568; /* gray-700 */
   --secondary-button-hover-bg-dark: #616e80; /* gray-600 */
+  --secondary-button-border-dark: #2d3748;
   
   --emerald-button-bg-dark: #065f46; /* emerald-800 */
   --emerald-button-hover-bg-dark: #047857; /* emerald-700 */
-  --emerald-button-shadow-dark: 6, 95, 70; /* RGB for emerald-800 */
+  --emerald-button-border-dark: #047857;
 
   --input-border-dark: #4a5568; /* gray-700 */
   --input-focus-ring-dark: #818cf8; /* indigo-400 */
@@ -132,17 +160,45 @@ body.dark {
   --auto-mapped-unmapped-bg: #4a5568; /* gray-700 */
   --auto-mapped-unmapped-text: #a0aec0; /* gray-400 */
 
+  /* Tab Buttons */
   --tab-button-bg-dark: #2d3748; /* gray-800 */
   --tab-button-hover-bg-dark: #4a5568; /* gray-700 */
   --tab-button-active-bg-dark: #6366f1; /* indigo-500 */
   --tab-button-active-text-dark: #ffffff;
   --tab-button-text-dark: #e2e8f0; /* gray-200 */
   
+  /* Clickable Elements List */
   --clickable-container-bg: #2d3748; /* gray-800 */
   --clickable-item-border: #4a5568; /* gray-700 */
   --clickable-item-hover-bg: #4a5568; /* gray-700 */
   --selected-button-highlight-bg: #4f46e5; /* indigo-600 */
   --selected-button-highlight-border: #a5b4fc; /* indigo-300 */
+
+  /* New & Refined Shadows (Dark Mode) */
+  --main-container-shadow-dark: 
+    0 15px 30px -10px rgba(0, 0, 0, 0.35), 
+    0 8px 15px -5px rgba(0, 0, 0, 0.2);
+  --card-shadow-dark: 
+    0 6px 12px -4px rgba(0, 0, 0, 0.2), 
+    0 3px 6px -2px rgba(0, 0, 0, 0.15);
+  
+  --primary-button-shadow-dark: 
+    0 10px 20px -5px rgba(79, 70, 229, 0.4), 
+    0 4px 6px -2px rgba(79, 70, 229, 0.2);
+  --emerald-button-shadow-dark: 
+    0 10px 20px -5px rgba(6, 95, 70, 0.4), 
+    0 4px 6px -2px rgba(6, 95, 70, 0.2);
+  --secondary-button-shadow-dark: 
+    0 8px 15px -4px rgba(74, 85, 104, 0.25), 
+    0 3px 5px -1px rgba(74, 85, 104, 0.1);
+
+  --tab-button-active-shadow-dark: 
+    0 8px 16px rgba(0,0,0,0.3), 
+    0 4px 8px rgba(0,0,0,0.15);
+
+  --drop-area-inner-shadow-dark: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  --header-badge-shadow-dark: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 /* Base styles for the body, applied in light mode by default */
@@ -167,7 +223,9 @@ body {
     padding: 1.5rem; /* Generous padding */
     background-color: var(--card-bg-light);
     border-radius: 0.75rem; /* Rounded corners */
-    box-shadow: 0 6px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Prominent shadow */
+    /* Refined shadow for a softer, more layered look */
+    box-shadow: var(--main-container-shadow-light);
+    border: 1px solid var(--border-color-light); /* Added a subtle border */
     position: relative; /* For theme switch positioning */
     transition: background-color 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
 }
@@ -185,7 +243,8 @@ body {
     padding: 1.25rem; /* Generous padding */
     border: 1px solid var(--border-color-light);
     border-radius: 0.75rem;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08); /* Stronger shadow for cards */
+    /* Refined shadow for cards */
+    box-shadow: var(--card-shadow-light);
     margin-bottom: 1.5rem; /* Space between cards */
     transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
@@ -195,57 +254,66 @@ body {
     display: flex; /* Flexbox for icon and text alignment */
     align-items: center;
     justify-content: center;
-    padding: 0.75rem 1.75rem; /* Adjusted padding */
+    padding: 0.85rem 1.75rem; /* Slightly increased vertical padding for better feel */
     border-radius: 9999px; /* Fully rounded (pill shape) */
     font-weight: 600;
-    transition: background-color 0.3s ease, transform 0.1s ease, box-shadow 0.3s ease;
-    border: none;
+    transition: background-color 0.3s ease, transform 0.1s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    border: 1px solid transparent; /* Subtle border for precision */
     cursor: pointer;
     font-size: 1rem;
     line-height: 1.5rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* Subtle shadow */
     outline: none; /* Remove default focus outline */
+    /* Remove base box-shadow here, specific button classes will apply their own */
+    box-shadow: none; 
 }
 .action-button:hover {
-    transform: translateY(-1px); /* Slight lift effect */
-    box-shadow: 0 6px 10px -2px rgba(0, 0, 0, 0.15), 0 3px 6px -2px rgba(0, 0, 0, 0.08);
+    transform: translateY(-3px); /* More pronounced lift */
+    /* Box shadow handled by specific button types using their hover colors */
 }
 .action-button:active {
     transform: translateY(0); /* Press down effect */
-    box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
+    /* Box shadow handled by specific button types */
 }
 .action-button:focus-visible {
-    /* Custom focus ring for accessibility using CSS variables */
-    box-shadow: 0 0 0 4px rgba(var(--focus-ring-color-rgb), 0.5), 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    /* Custom focus ring for accessibility, simpler now */
+    box-shadow: 0 0 0 4px rgba(var(--focus-ring-color-rgb), 0.5); 
 }
 
 /* Specific button colors (light mode) */
 .action-button.primary {
     background-color: var(--primary-button-bg-light);
     color: #fff;
-    --focus-ring-color-rgb: var(--primary-button-shadow-light);
+    border-color: var(--primary-button-border-light);
+    box-shadow: var(--primary-button-shadow-light); /* Apply defined shadow */
+    --focus-ring-color-rgb: 37, 99, 235; /* RGB for blue-600 */
 }
 .action-button.primary:hover {
     background-color: var(--primary-button-hover-bg-light);
+    box-shadow: 0 15px 30px -10px rgba(37, 99, 235, 0.5), 0 6px 10px -3px rgba(37, 99, 235, 0.3); /* Even stronger hover shadow */
 }
 
 .action-button.emerald {
     background-color: var(--emerald-button-bg-light);
     color: #fff;
-    --focus-ring-color-rgb: var(--emerald-button-shadow-light);
+    border-color: var(--emerald-button-border-light);
+    box-shadow: var(--emerald-button-shadow-light);
+    --focus-ring-color-rgb: 5, 150, 105; /* RGB for emerald-600 */
 }
 .action-button.emerald:hover {
     background-color: var(--emerald-button-hover-bg-light);
+    box-shadow: 0 15px 30px -10px rgba(5, 150, 105, 0.5), 0 6px 10px -3px rgba(5, 150, 105, 0.3);
 }
 
 .action-button.secondary {
     background-color: var(--secondary-button-bg-light);
     color: #fff; /* White text for better contrast on gray */
-    box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05); /* Lighter shadow */
+    border-color: var(--secondary-button-border-light);
+    box-shadow: var(--secondary-button-shadow-light); /* Lighter shadow */
     --focus-ring-color-rgb: 107, 114, 128; /* gray-500 RGB */
 }
 .action-button.secondary:hover {
     background-color: var(--secondary-button-hover-bg-light);
+    box-shadow: 0 12px 20px -8px rgba(107, 114, 128, 0.35), 0 5px 8px -2px rgba(107, 114, 128, 0.15);
 }
 
 /* Form Input Styling */
@@ -281,6 +349,7 @@ body {
     align-items: center;
     justify-content: center;
     min-height: 10rem;
+    box-shadow: var(--drop-area-inner-shadow-light); /* Added inner shadow */
 }
 .drop-area:hover {
     background-color: var(--drop-area-hover-bg-light);
@@ -299,7 +368,7 @@ body {
     display: inline-block;
     background-color: var(--primary-button-bg-light);
     color: #fff;
-    padding: 0.85rem 2rem;
+    padding: 0.85rem 2rem; /* Adjusted to match action button padding */
     border-radius: 9999px;
     font-size: 1.125rem;
     font-weight: 600;
@@ -362,7 +431,7 @@ body {
     border-radius: 9999px;
     font-size: 0.95rem;
     font-weight: 500;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05); /* Subtle shadow */
+    box-shadow: var(--header-badge-shadow-light); /* Added badge shadow */
     transition: background-color 0.2s ease, box-shadow 0.2s ease;
     display: flex;
     align-items: center;
@@ -526,7 +595,8 @@ body {
 .tab-button.active {
     background-color: var(--tab-button-active-bg);
     color: var(--tab-button-active-text);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.06);
+    box-shadow: var(--tab-button-active-shadow-light); /* Applied new shadow */
+    transform: translateY(-1px); /* Slight lift for active tab */
     font-weight: 600;
 }
 .tab-button i {
@@ -651,6 +721,8 @@ body.dark {
 .main-container.dark {
     background-color: var(--card-bg-dark);
     border-color: var(--border-color-dark);
+    /* Refined dark mode shadow */
+    box-shadow: var(--main-container-shadow-dark);
 }
 .section-heading.dark, .card-heading.dark {
     color: var(--header-text-color-dark);
@@ -659,28 +731,39 @@ body.dark {
 .card.dark {
     background-color: var(--card-bg-dark);
     border-color: var(--border-color-dark);
+    /* Refined dark mode shadow for cards */
+    box-shadow: var(--card-shadow-dark);
 }
 .action-button.primary.dark {
     background-color: var(--primary-button-bg-dark);
-    --focus-ring-color-rgb: var(--primary-button-shadow-dark);
+    border-color: var(--primary-button-border-dark);
+    box-shadow: var(--primary-button-shadow-dark);
+    --focus-ring-color-rgb: 79, 70, 229; /* indigo-600 RGB */
 }
 .action-button.primary.dark:hover {
     background-color: var(--primary-button-hover-bg-dark);
+    box-shadow: 0 15px 30px -10px rgba(79, 70, 229, 0.5), 0 6px 10px -3px rgba(79, 70, 229, 0.3);
 }
 .action-button.emerald.dark {
     background-color: var(--emerald-button-bg-dark);
-    --focus-ring-color-rgb: var(--emerald-button-shadow-dark);
+    border-color: var(--emerald-button-border-dark);
+    box-shadow: var(--emerald-button-shadow-dark);
+    --focus-ring-color-rgb: 6, 95, 70; /* emerald-800 RGB */
 }
 .action-button.emerald.dark:hover {
     background-color: var(--emerald-button-hover-bg-dark);
+    box-shadow: 0 15px 30px -10px rgba(6, 95, 70, 0.5), 0 6px 10px -3px rgba(6, 95, 70, 0.3);
 }
 .action-button.secondary.dark {
     background-color: var(--secondary-button-bg-dark);
     color: var(--text-color-dark);
+    border-color: var(--secondary-button-border-dark);
+    box-shadow: var(--secondary-button-shadow-dark);
     --focus-ring-color-rgb: 74, 85, 104; /* gray-700 RGB */
 }
 .action-button.secondary.dark:hover {
     background-color: var(--secondary-button-hover-bg-dark);
+    box-shadow: 0 12px 20px -8px rgba(74, 85, 104, 0.35), 0 5px 8px -2px rgba(74, 85, 104, 0.15);
 }
 .form-input.dark {
     border-color: var(--input-border-dark);
@@ -694,6 +777,7 @@ body.dark {
 .drop-area.dark {
     border-color: var(--drop-area-border-dark);
     background-color: var(--drop-area-bg-dark);
+    box-shadow: var(--drop-area-inner-shadow-dark);
 }
 .drop-area.dark:hover {
     background-color: var(--drop-area-hover-bg-dark);
@@ -738,6 +822,7 @@ body.dark {
 .headers-list.dark span {
     background-color: var(--header-badge-bg-dark);
     color: var(--header-badge-text-dark);
+    box-shadow: var(--header-badge-shadow-dark);
 }
 .headers-list.dark span:hover {
     background-color: var(--header-badge-hover-bg-dark);
@@ -796,6 +881,7 @@ body.dark {
 .tab-button.active.dark {
     background-color: var(--tab-button-active-bg-dark);
     color: var(--tab-button-active-text-dark);
+    box-shadow: var(--tab-button-active-shadow-dark);
 }
 #clickableButtonsContainer.dark {
     border-color: var(--clickable-item-border);
@@ -846,7 +932,7 @@ body.dark {
     margin-bottom: 0.75rem;
   }
   .action-button {
-    padding: 0.6rem 1.2rem;
+    padding: 0.75rem 1.5rem; /* Adjusted for smaller screens */
     font-size: 0.9rem;
   }
   .browse-button {

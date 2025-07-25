@@ -107,14 +107,17 @@
                     </div>
                 </div>
 
-                <!-- Main fill data button -->
-                <button id="fillDataButton" class="action-button primary w-full mt-6">
-                    <i class="fas fa-paper-plane mr-2"></i>Fill Data
-                </button>
-                <!-- One-Click Autofill button (hidden by default) -->
-                <button id="oneClickAutofillButton" class="action-button primary w-full mt-2 hidden text-sm py-1.5 px-2">
-                    <i class="fas fa-magic mr-1 text-sm"></i>One-Click Autofill (Auto-Map &amp; Fill)
-                </button>
+                <!-- Main fill data buttons -->
+                <div class="flex flex-col space-y-3 mt-6">
+                    <button id="fillDataButton" class="action-button primary w-full">
+                        <i class="fas fa-paper-plane mr-2"></i>Fill Data
+                    </button>
+                    <!-- Adjusted size and spacing to match primary button more closely -->
+                    <button id="oneClickAutofillButton" class="action-button primary w-full hidden">
+                        <i class="fas fa-magic mr-2"></i>One-Click Autofill (Auto-Map &amp; Fill)
+                    </button>
+                </div>
+                
                 <!-- Message area for fill data feedback -->
                 <div id="fillDataMessage" class="message-box mt-3 hidden"></div>
             </div>

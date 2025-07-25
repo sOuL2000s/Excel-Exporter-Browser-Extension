@@ -652,6 +652,11 @@ body {
     overflow-x: hidden;
 }
 
+/* Explicitly hide the default file input */
+#fileInput {
+    display: none !important;
+}
+
 /* Main Container styling */
 .main-container {
     padding: 1.5rem; /* Generous padding */
@@ -2764,3 +2769,9 @@ function displayFileStatusMessage(message, type, element, isHtml = false) {
 
 
 --- END FILE: popup.js ---
+
+----------------------------------------------------------------------------------------------------------------------------------
+
+do the following please:
+
+the problem i'm facing now are with the buttons being of wrong size and the distance between one button and the other(like in "fill data" button and "one-click auto fill" button). i also want to make it visually more attractive and precise.
