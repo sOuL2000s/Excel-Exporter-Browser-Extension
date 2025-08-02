@@ -106,8 +106,8 @@ html { /* Apply theme variables to html element for broader scope */
 
 /* Dark Mode Overrides (Default Light Mode values are above) */
 html.dark { /* Apply dark theme variables when html has 'dark' class */
-  --bg-color-dark: #1e293b; /* slate-900 */
-  --text-color-dark: #cbd5e1; /* slate-300 */
+  --bg-color-dark: #0f172a; /* slate-950 (deeper dark) */
+  --text-color-dark: #e2e8f0; /* slate-200 (lighter for contrast) */
   --header-text-color-dark: #f1f5f9; /* slate-50 */
   --card-bg-dark: #334155; /* slate-700 */
   --border-color-dark: #475569; /* slate-600 */
@@ -171,8 +171,8 @@ html.dark { /* Apply dark theme variables when html has 'dark' class */
   --clickable-container-bg: #2d3748; /* gray-800 */
   --clickable-item-border: #4a5568; /* gray-700 */
   --clickable-item-hover-bg: #4a5568; /* gray-700 */
-  --selected-button-highlight-bg: #4f46e5; /* indigo-600 */
-  --selected-button-highlight-border: #a5b4fc; /* indigo-300 */
+  --selected-item-highlight-bg-dark: #3730a3; /* indigo-900 */
+  --selected-item-highlight-border-dark: #4f46e5; /* indigo-600 */
 
   /* New & Refined Shadows (Dark Mode) */
   --main-container-shadow-dark: 
@@ -204,6 +204,9 @@ html.dark { /* Apply dark theme variables when html has 'dark' class */
 /* Base styles for the body, applied in light mode by default */
 html { /* Set default font and background for the entire document */
     box-sizing: border-box;
+    background-color: var(--bg-color-light); /* Default background for html */
+    color: var(--text-color-light); /* Default text color for html */
+    transition: background-color 0.3s ease, color 0.3s ease; /* Smooth transition for theme change */
 }
 *, *::before, *::after { /* Universal box-sizing reset */
     box-sizing: inherit;
@@ -211,6 +214,7 @@ html { /* Set default font and background for the entire document */
 body { /* Body specific styles */
     font-family: 'Inter', sans-serif;
     min-width: 380px; /* Wider popup */
+    overflow-x: hidden; /* Prevent horizontal scrollbar */
 }
 
 /* Explicitly hide the default file input */
@@ -458,8 +462,15 @@ html.dark .form-input:disabled {
     align-items: center;
     cursor: default;
 }
+.headers-list span.dark { /* Apply dark mode styles when span itself has 'dark' class */
+    background-color: var(--header-badge-bg-dark);
+    color: var(--header-badge-text-dark);
+}
 .headers-list span:hover {
     background-color: var(--header-badge-hover-bg-light);
+}
+.headers-list span.dark:hover { /* Hover for dark mode badge */
+    background-color: var(--header-badge-hover-bg-dark);
 }
 
 /* Checkbox/Radio Labels (Custom appearance) */
@@ -598,6 +609,18 @@ html.dark .form-input:disabled {
     background-color: var(--auto-mapped-unmapped-bg);
     color: var(--auto-mapped-unmapped-text);
 }
+.auto-mapped-badge.dark { /* Dark mode for badges */
+  background-color: var(--auto-mapped-learned-bg); /* Use dark variable for bg */
+  color: var(--auto-mapped-learned-text); /* Use dark variable for text */
+}
+.auto-mapped-badge.fuzzy.dark {
+  background-color: var(--auto-mapped-fuzzy-bg);
+  color: var(--auto-mapped-fuzzy-text);
+}
+.auto-mapped-badge.unmapped.dark {
+  background-color: var(--auto-mapped-unmapped-bg);
+  color: var(--auto-mapped-unmapped-text);
+}
 
 /* Tab Styling */
 .tab-buttons {
@@ -700,7 +723,7 @@ html.dark .form-input:disabled {
 } /* Specific to clickControlSection's labels */
 /* Highlight for selected clickable button */
 .selected-button-highlight {
-    background-color: var(--selected-button-highlight-bg);
+    background-color: var(--selected-item-highlight-bg-light);
     border-color: var(--selected-button-highlight-border);
     font-weight: 600;
 }
@@ -750,7 +773,7 @@ input:checked + .slider::before {
 html.dark { /* Apply dark mode styles to html element */
     background-color: var(--bg-color-dark);
     color: var(--text-color-dark);
-} /* Body inherits from html, so no need for body.dark */
+} 
 .main-container.dark {
     background-color: var(--card-bg-dark);
     border-color: var(--border-color-dark);
@@ -919,13 +942,13 @@ html.dark { /* Apply dark mode styles to html element */
 }
 #clickableButtonsContainer.dark, #clickControlSection .scrollable-list.dark { /* Generic list dark mode */
     border-color: var(--list-item-border-light);
-    background-color: var(--list-container-bg-light);
+    background-color: var(--clickable-container-bg); /* This variable is already dark-mode specific */
 }
 #clickableButtonsContainer.dark > div, #clickControlSection .scrollable-list.dark > div {
     border-color: var(--list-item-border-light);
 }
 #clickableButtonsContainer.dark > div:hover:not(.selected-button-highlight), #clickControlSection .scrollable-list.dark > div:hover:not(.selected-button-highlight) {
-    background-color: var(--list-item-hover-bg-light);
+    background-color: var(--clickable-item-hover-bg); /* This variable is already dark-mode specific */
 }
 #clickableButtonsContainer.dark label, #clickControlSection .scrollable-list.dark label {
     color: var(--text-color-dark);
@@ -938,8 +961,9 @@ html.dark { /* Apply dark mode styles to html element */
     color: var(--text-color-dark);
 }
 .selected-button-highlight.dark {
-    background-color: var(--selected-item-highlight-bg-light); /* Highlight BG in dark mode */
-    border-color: var(--selected-button-highlight-border);
+    background-color: var(--selected-item-highlight-bg-dark); /* Now uses dark mode specific var */
+    border-color: var(--selected-item-highlight-border-dark);
+    color: var(--text-color-dark); /* Ensure text color is good */
 }
 /* Dark mode for theme switch slider */
 .theme-switch input:checked + .slider.dark {

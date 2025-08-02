@@ -292,7 +292,6 @@ startClickingButton.addEventListener("click", async () => {
     try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (!tab) {
-            // FIX: Changed to use displayMessage
             displayMessage(autoClickMessage, 'Could not get active tab.', 'error', false);
             return;
         }
@@ -305,16 +304,13 @@ startClickingButton.addEventListener("click", async () => {
         });
 
         if (response?.status === "success") {
-            // FIX: Changed to use displayMessage
             displayMessage(autoClickMessage, `<i class="fas fa-check-circle"></i>Clicked ${count} time(s) successfully.`, "success", true);
         } else {
             console.error(`Error during click: ${response?.message || 'Unknown error.'}`);
-            // FIX: Changed to use displayMessage
             displayMessage(autoClickMessage, `<i class="fas fa-exclamation-triangle"></i>Failed to click: ${response?.message || 'Unknown error.'}`, "error", true);
         }
     } catch (error) {
         console.error("Error performing click:", error);
-        // FIX: Changed to use displayMessage
         displayMessage(autoClickMessage, `<i class="fas fa-exclamation-triangle"></i>Error performing click: ${error.message}.`, "error", true);
     } finally {
         startClickingButton.disabled = false;
@@ -520,13 +516,17 @@ function displayHeaders(headersArray, targetSection) {
     if (headersArray.length > 0) {
         headersArray.forEach(header => {
             const span = document.createElement('span');
-            // Apply theme classes based on current body theme
-            span.className = `px-5 py-2 rounded-full text-base font-medium shadow-sm flex items-center transition-colors duration-200 cursor-default ${document.documentElement.classList.contains('dark') ? 'bg-indigo-600 text-indigo-100 hover:bg-indigo-700' : 'bg-indigo-100 text-indigo-800 hover:bg-indigo-200'}`;
+            // Apply semantic classes and then toggle 'dark' based on current theme
+            span.className = `px-5 py-2 rounded-full text-base font-medium shadow-sm flex items-center transition-colors duration-200 cursor-default`;
+            if (document.documentElement.classList.contains('dark')) {
+                span.classList.add('dark'); // Explicitly add dark class for CSS to pick up
+            }
             span.textContent = header;
             headersDisplayElem.appendChild(span);
         });
     } else {
         headersDisplayElem.textContent = 'No headers found in the first row.';
+        // This text is plain, will inherit body text color which is already themed.
         headersDisplayElem.classList.add('text-gray-500', 'dark:text-gray-400', 'text-sm');
     }
 }
@@ -660,10 +660,10 @@ function setupFieldMapping(groupedFields, headersArray, targetSection) {
         const fieldsInGroup = groupedFields[contextKey];
         const mappingGroupItem = document.createElement('div');
         // Apply card styling and theme class
-        mappingGroupItem.className = `field-mapping-group-item card ${document.body.classList.contains('dark') ? 'dark' : ''}`;
+        mappingGroupItem.className = `field-mapping-group-item card ${document.documentElement.classList.contains('dark') ? 'dark' : ''}`;
         
         const groupHeader = document.createElement('h3');
-        groupHeader.className = `text-md font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center card-heading ${document.body.classList.contains('dark') ? 'dark' : ''}`;
+        groupHeader.className = `text-md font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center card-heading ${document.documentElement.classList.contains('dark') ? 'dark' : ''}`;
         groupHeader.textContent = contextKey;
         mappingGroupItem.appendChild(groupHeader);
 
