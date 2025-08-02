@@ -95,9 +95,9 @@ fullAutomationTab.addEventListener("click", () => switchTab('fullAutomation')); 
 themeToggle.addEventListener('change', () => {
     // Toggle 'dark' class on the body to apply dark mode styles
     const isDarkMode = themeToggle.checked;
-    document.body.classList.toggle('dark', isDarkMode);
+    document.documentElement.classList.toggle('dark', isDarkMode); // Apply to html element
 
-    // Get all elements that need their 'dark' class toggled based on the theme state
+    // Get all elements that need their 'dark' class toggled based on the theme state (using querySelectorAll for all instances)
     const elementsToToggle = [
         document.querySelector('.main-container'),
         ...document.querySelectorAll('.card'),
@@ -116,11 +116,9 @@ themeToggle.addEventListener('change', () => {
         ...document.querySelectorAll('.auto-mapped-badge'),
         ...document.querySelectorAll('.tab-buttons'),
         ...document.querySelectorAll('.tab-button'),
-        document.getElementById('clickableButtonsContainer'),
+        document.getElementById('clickableButtonsContainer'), // Specific element
         ...document.querySelectorAll('#clickableButtonsContainer > div'),
         ...document.querySelectorAll('#clickableButtonsContainer label'),
-        document.getElementById('clickControlSection'),
-        ...document.querySelectorAll('#clickControlSection label'),
         ...document.querySelectorAll('.selected-button-highlight'),
         ...document.querySelectorAll('.slider')
     ].filter(Boolean); // Filter out nulls if elements aren't always present
@@ -129,11 +127,13 @@ themeToggle.addEventListener('change', () => {
         el.classList.toggle('dark', isDarkMode);
         // Special handling for selected-button-highlight on tab switch
         if (el.classList.contains('selected-button-highlight')) {
-            el.classList.toggle('dark:selected-button-highlight', isDarkMode);
+            el.classList.toggle('dark', isDarkMode); // Only toggle 'dark' on the element
         }
         // Special handling for tab buttons active state
         if (el.classList.contains('tab-button') && el.classList.contains('active')) {
-            el.classList.toggle('dark:active', isDarkMode);
+            el.classList.add('dark:active');
+        } else {
+            el.classList.remove('dark:active');
         }
     });
 
@@ -226,13 +226,13 @@ scanButtons.addEventListener("click", async () => {
                         document.querySelectorAll('#clickableButtonsContainer > div').forEach(div => {
                             div.classList.remove('selected-button-highlight');
                             // Ensure dark mode highlight is also removed/added correctly
-                            div.classList.remove('dark:selected-button-highlight'); 
+                            div.classList.remove('dark'); 
                         });
                         // Add highlight to the newly selected button's parent div
                         if (e.target.checked) {
                             btnDiv.classList.add('selected-button-highlight');
-                            if (document.body.classList.contains('dark')) {
-                                btnDiv.classList.add('dark:selected-button-highlight');
+                            if (document.documentElement.classList.contains('dark')) {
+                                btnDiv.classList.add('dark');
                             }
                         }
                     });
@@ -379,10 +379,10 @@ async function switchTab(activeTabId) {
     autoClickTab.classList.remove('active', 'dark:active');
     fullAutomationTab.classList.remove('active', 'dark:active'); // New tab
 
-    const targetTabButton = document.getElementById(`${activeTabId}Tab`);
+    const targetTabButton = document.getElementById(`${activeTabId}Tab`); // Get the correct tab button
     targetTabButton.classList.add('active');
     // Ensure dark mode active class is applied if current theme is dark
-    if (document.body.classList.contains('dark')) {
+    if (document.documentElement.classList.contains('dark')) {
         targetTabButton.classList.add('dark:active');
     }
 
@@ -521,7 +521,7 @@ function displayHeaders(headersArray, targetSection) {
         headersArray.forEach(header => {
             const span = document.createElement('span');
             // Apply theme classes based on current body theme
-            span.className = `px-5 py-2 rounded-full text-base font-medium shadow-sm flex items-center transition-colors duration-200 cursor-default ${document.body.classList.contains('dark') ? 'bg-indigo-700 text-indigo-100 hover:bg-indigo-600' : 'bg-indigo-100 text-indigo-800 hover:bg-indigo-200'}`;
+            span.className = `px-5 py-2 rounded-full text-base font-medium shadow-sm flex items-center transition-colors duration-200 cursor-default ${document.documentElement.classList.contains('dark') ? 'bg-indigo-600 text-indigo-100 hover:bg-indigo-700' : 'bg-indigo-100 text-indigo-800 hover:bg-indigo-200'}`;
             span.textContent = header;
             headersDisplayElem.appendChild(span);
         });
@@ -672,7 +672,7 @@ function setupFieldMapping(groupedFields, headersArray, targetSection) {
 
         const label = document.createElement('label');
         // Apply theme class to label
-        label.className = `checkbox-label flex-shrink-0 ${document.body.classList.contains('dark') ? 'dark' : ''}`;
+        label.className = `checkbox-label flex-shrink-0 ${document.documentElement.classList.contains('dark') ? 'dark' : ''}`;
         
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
@@ -690,7 +690,7 @@ function setupFieldMapping(groupedFields, headersArray, targetSection) {
 
         const select = document.createElement('select');
         // Apply form-input and theme class to select
-        select.className = `group-mapper flex-grow mt-2 sm:mt-0 form-input ${document.body.classList.contains('dark') ? 'dark' : ''}`;
+        select.className = `group-mapper flex-grow mt-2 sm:mt-0 form-input ${document.documentElement.classList.contains('dark') ? 'dark' : ''}`;
         select.dataset.contextKey = contextKey;
         select.disabled = true; // Initially disabled
 
@@ -831,9 +831,9 @@ function updateBadgeForGroup(groupHeaderElement, type, scoreText = '') {
     badge.classList.remove('learned', 'fuzzy', 'unmapped');
     // Add the current type class
     badge.classList.add(type);
-
+    
     // Apply dark mode class to the badge if the body is in dark mode
-    if (document.body.classList.contains('dark')) {
+    if (document.documentElement.classList.contains('dark')) {
         badge.classList.add('dark');
     } else {
         badge.classList.remove('dark');
@@ -863,7 +863,7 @@ function updateBadgeForGroup(groupHeaderElement, type, scoreText = '') {
  * @param {HTMLElement} groupHeaderElement - The H3 element of the group.
  */
 function removeAutoMappedBadge(groupHeaderElement) {
-    const badge = groupHeaderElement.querySelector('.auto-mapped-badge');
+    const badge = groupHeaderElement.querySelector('.auto-mapped-badge'); // Select the badge within the group header
     if (badge) {
         badge.classList.add('hidden'); // Simply hide it
     }
@@ -890,7 +890,7 @@ async function saveLearnedMappings() {
         await chrome.storage.sync.set({ learnedMappings: currentMappings });
         console.log('Learned mappings saved:', currentMappings);
         // After saving, re-run autoMapFields to update badges based on newly learned mappings
-        if (Object.keys(groupedFormFields).length > 0 && headers.length > 0) {
+        if (Object.keys(groupedFormFields).length > 0 && headers.length > 0) { // Check if fields and headers exist
             // This will ensure badges are updated across both tabs if necessary
             autoMapFields(groupedFormFields, headers, 'autoFill'); 
             autoMapFields(groupedFormFields, headers, 'fullAutomation');
@@ -990,8 +990,7 @@ async function fillDataInTab(targetSection) {
                     const targetField = fieldsInThisGroup[rowIndex]; 
 
                     if (targetField) {
-                        const value = spreadsheetRow[columnIndex];
-                        // Ensure value is converted to a string for form filling consistency
+                        const value = spreadsheetRow[columnIndex]; // Get value from spreadsheet cell
                         dataBatch.push({
                             id: targetField.id,
                             value: (value !== undefined && value !== null) ? String(value) : ''
@@ -1238,7 +1237,7 @@ function displayMessage(element, message, type, isHtml = false) {
     element.classList.remove('hidden');
 
     // Apply dark mode class based on current body theme
-    if (document.body.classList.contains('dark')) {
+    if (document.documentElement.classList.contains('dark')) { // Apply to html element
         element.classList.add('dark');
     } else {
         element.classList.remove('dark');
@@ -1283,7 +1282,7 @@ function displayFileStatusMessage(message, type, element, messageSpan, iconElem,
     }
 
     // Apply dark mode class if body is dark
-    if (document.body.classList.contains('dark')) {
+    if (document.documentElement.classList.contains('dark')) { // Apply to html element
         element.classList.add('dark');
     } else {
         element.classList.remove('dark');

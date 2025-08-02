@@ -13,7 +13,7 @@
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- Custom Stylesheet -->
-    <link rel="stylesheet" href="popup.css">
+    <link rel="stylesheet" href="popup.css"> 
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center min-h-screen p-4 transition-colors duration-300 antialiased">
     <!-- Main Container with responsive sizing and shadows -->
@@ -49,7 +49,7 @@
                 <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">Supported: <span class="font-medium text-gray-700 dark:text-gray-300">.XLS, .XLSX, .ODS, .CSV, .XLSM, .XLSB.</span></p>
                 
                 <div class="drop-area" id="drop-area-autofill">
-                    <!-- Hidden file input, triggered by the custom browse button -->
+                    <i class="fas fa-file-upload text-4xl text-blue-500 dark:text-blue-400 mb-3"></i>
                     <input type="file" id="fileInputAutoFill" class="hidden" accept=".xls,.xlsx,.ods,.csv,.xlsm,.xlsb" />
                     <p id="fileNameDisplayAutoFill" class="text-gray-500 dark:text-gray-400 mb-1 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition duration-300 ease-in-out">
                         Drag & Drop your file here, or
@@ -142,7 +142,7 @@
             <!-- Step 2: Select a Button Card (visible after scan) -->
             <div id="selectButtonCard" class="card hidden mb-6">
                 <h3 class="card-heading text-md md:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3"><i class="fas fa-hand-pointer mr-2 text-indigo-500"></i>2. Select a Button</h3>
-                <div id="clickableButtonsContainer" class="max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 p-2 mb-4">
+                <div id="clickableButtonsContainer" class="scrollable-list bg-gray-50 dark:bg-gray-700 p-2 mb-4">
                     <!-- Clickable buttons will be listed here dynamically as radio buttons -->
                     <p class="text-gray-500 dark:text-gray-400 text-sm p-2">No buttons found yet. Click 'Scan' above.</p>
                 </div>
@@ -151,7 +151,7 @@
             <!-- Step 3: Choose Number of Clicks & Execute Card (visible after scan) -->
             <div id="clickControlSection" class="card hidden">
                 <h3 class="card-heading text-md md:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3"><i class="fas fa-play-circle mr-2 text-indigo-500"></i>3. Choose Number of Clicks & Execute</h3>
-                <label for="clickCount" class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Number of clicks:</label>
+                <label for="clickCount" class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Number of clicks (per spreadsheet row, or total for single click):</label>
                 <input type="number" id="clickCount" value="1" min="1" class="mb-4 form-input" />
                 <button id="startClicking" class="action-button primary w-full">
                     <i class="fas fa-bullseye mr-2"></i>Start Clicking
@@ -172,6 +172,7 @@
                 <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">Supported: <span class="font-medium text-gray-700 dark:text-gray-300">.XLS, .XLSX, .ODS, .CSV, .XLSM, .XLSB.</span></p>
                 
                 <div class="drop-area" id="drop-area-fullautomation">
+                    <i class="fas fa-file-upload text-4xl text-emerald-500 dark:text-emerald-400 mb-3"></i>
                     <input type="file" id="fileInputFullAutomation" class="hidden" accept=".xls,.xlsx,.ods,.csv,.xlsm,.xlsb" />
                     <p id="fileNameDisplayFullAutomation" class="text-gray-500 dark:text-gray-400 mb-1 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition duration-300 ease-in-out">
                         Drag & Drop your file here, or

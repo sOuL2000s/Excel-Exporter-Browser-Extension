@@ -376,7 +376,7 @@ async function clickElementByStableId(stableId, count) {
     try {
         for (let i = 0; i < count; i++) {
             target.click(); // Programmatically perform the click event
-            // Introduce a short delay to simulate human interaction and allow DOM to react
+            // Introduce a short delay to simulate human interaction and allow DOM to react, especially useful for forms that reload or have animations
             await new Promise(resolve => setTimeout(resolve, 300)); // 300ms delay between clicks
         }
         return { success: true };

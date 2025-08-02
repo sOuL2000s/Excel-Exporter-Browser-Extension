@@ -3221,3 +3221,7 @@ async function startFullAutomation() {
 
 
 --- END FILE: popup.js ---
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+improve it visually, make it more attractive and appealing. fix the overall responsiveness.

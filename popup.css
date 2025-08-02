@@ -1,13 +1,13 @@
 /* popup.css */
 
 /* Define CSS Variables for theming (Light and Dark Mode) */
-:root {
+html { /* Apply theme variables to html element for broader scope */
   /* Light Mode Colors */
-  --bg-color-light: #f9fafb; /* gray-50 */
-  --text-color-light: #1f2937; /* Dark gray */
+  --bg-color-light: #f8fafc; /* slate-50 */
+  --text-color-light: #334155; /* slate-700 */
   --header-text-color-light: #111827; /* Darker gray */
   --card-bg-light: #ffffff; /* White */
-  --border-color-light: #e5e7eb; /* Light border */
+  --border-color-light: #e2e8f0; /* slate-200 Light border */
 
   /* Primary Action Button (Blue) */
   --primary-button-bg-light: #2563eb; /* blue-600 */
@@ -45,7 +45,7 @@
   --file-status-error-text-light: #991b1b; /* red-700 */
   --file-status-error-icon-light: #ef4444; /* red-500 */
 
-  --file-status-info-bg-light: #e0f2fe; /* blue-100 */
+  --file-status-info-bg-light: #e0f2fe; /* light blue-100 */
   --file-status-info-border-light: #60a5fa; /* blue-400 */
   --file-status-info-text-light: #1e40af; /* blue-700 */
   --file-status-info-icon-light: #3b82f6; /* blue-500 */
@@ -70,11 +70,11 @@
   --tab-button-active-text: #2563eb; /* blue-600 */
   --tab-button-text: #4b5563; /* gray-700 */
   
-  /* Clickable Elements List */
-  --clickable-container-bg: #f9fafb; /* gray-50 */
-  --clickable-item-border: #e5e7eb; /* gray-200 */
-  --clickable-item-hover-bg: #f3f4f6; /* gray-100 */
-  --selected-button-highlight-bg: #e0f2fe; /* blue-100 */
+  /* Clickable Elements List (using more generic names now) */
+  --list-container-bg-light: #f9fafb; /* gray-50 */
+  --list-item-border-light: #e5e7eb; /* gray-200 */
+  --list-item-hover-bg-light: #f3f4f6; /* gray-100 */
+  --selected-item-highlight-bg-light: #e0f2fe; /* blue-100 */
   --selected-button-highlight-border: #93c5fd; /* blue-300 */
 
   /* New & Refined Shadows (Light Mode) */
@@ -105,14 +105,14 @@
 }
 
 /* Dark Mode Overrides (Default Light Mode values are above) */
-body.dark {
-  --bg-color-dark: #1f2937; /* gray-800 */
-  --text-color-dark: #e5e7eb; /* Light gray */
-  --header-text-color-dark: #f8fafc; /* White */
-  --card-bg-dark: #2d3748; /* Darker card */
-  --border-color-dark: #4a5568; /* Dark border */
+html.dark { /* Apply dark theme variables when html has 'dark' class */
+  --bg-color-dark: #1e293b; /* slate-900 */
+  --text-color-dark: #cbd5e1; /* slate-300 */
+  --header-text-color-dark: #f1f5f9; /* slate-50 */
+  --card-bg-dark: #334155; /* slate-700 */
+  --border-color-dark: #475569; /* slate-600 */
 
-  --primary-button-bg-dark: #4f46e5; /* indigo-600 */
+  --primary-button-bg-dark: #6366f1; /* indigo-500 */
   --primary-button-hover-bg-dark: #4338ca; /* indigo-700 */
   --primary-button-border-dark: #3730a3; /* Darker indigo for subtle border */
 
@@ -149,7 +149,7 @@ body.dark {
   --file-status-info-text-dark: #e0f2fe; /* blue-100 */
   --file-status-info-icon-dark: #3b82f6; /* blue-500 */
 
-  --header-badge-bg-dark: #4338ca; /* indigo-700 */
+  --header-badge-bg-dark: #4f46e5; /* indigo-600 */
   --header-badge-text-dark: #e0e7ff; /* indigo-100 */
   --header-badge-hover-bg-dark: #4f46e5; /* indigo-600 */
 
@@ -161,11 +161,11 @@ body.dark {
   --auto-mapped-unmapped-text: #a0aec0; /* gray-400 */
 
   /* Tab Buttons */
-  --tab-button-bg-dark: #2d3748; /* gray-800 */
-  --tab-button-hover-bg-dark: #4a5568; /* gray-700 */
-  --tab-button-active-bg-dark: #6366f1; /* indigo-500 */
-  --tab-button-active-text-dark: #ffffff;
-  --tab-button-text-dark: #e2e8f0; /* gray-200 */
+  --tab-button-bg-dark: #475569; /* slate-600 */
+  --tab-button-hover-bg-dark: #334155; /* slate-700 */
+  --tab-button-active-bg-dark: #4f46e5; /* indigo-600 */
+  --tab-button-active-text-dark: #f8fafc; /* slate-50 */
+  --tab-button-text-dark: #cbd5e1; /* slate-300 */
   
   /* Clickable Elements List */
   --clickable-container-bg: #2d3748; /* gray-800 */
@@ -202,30 +202,32 @@ body.dark {
 }
 
 /* Base styles for the body, applied in light mode by default */
-body {
-    font-family: 'Inter', sans-serif;
-    background-color: var(--bg-color-light);
-    color: var(--text-color-light);
-    transition: background-color 0.3s ease, color 0.3s ease;
+html { /* Set default font and background for the entire document */
     box-sizing: border-box;
-    min-width: 320px; /* Ensure a minimum width for small screens */
-    /* Prevent scrollbars for the main content unless needed */
-    overflow-x: hidden;
+}
+*, *::before, *::after { /* Universal box-sizing reset */
+    box-sizing: inherit;
+}
+body { /* Body specific styles */
+    font-family: 'Inter', sans-serif;
+    min-width: 380px; /* Wider popup */
 }
 
 /* Explicitly hide the default file input */
-#fileInputAutoFill, #fileInputFullAutomation { /* Updated IDs */
+#fileInputAutoFill, #fileInputFullAutomation { 
     display: none !important;
 }
 
 /* Main Container styling */
 .main-container {
-    padding: 1.5rem; /* Generous padding */
+    padding: 2rem; /* Generous padding */
     background-color: var(--card-bg-light);
-    border-radius: 0.75rem; /* Rounded corners */
+    border-radius: 1rem; /* Rounded corners */
     /* Refined shadow for a softer, more layered look */
     box-shadow: var(--main-container-shadow-light);
     border: 1px solid var(--border-color-light); /* Added a subtle border */
+    max-width: 500px; /* Increased max width */
+    min-height: 500px; /* Give it some vertical presence */
     position: relative; /* For theme switch positioning */
     transition: background-color 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
 }
@@ -240,8 +242,8 @@ body {
 /* Card Styling */
 .card {
     background-color: var(--card-bg-light);
-    padding: 1.25rem; /* Generous padding */
-    border: 1px solid var(--border-color-light);
+    padding: 1.5rem; /* Generous padding */
+    border: 1px solid var(--border-color-light); /* Consistent subtle border */
     border-radius: 0.75rem;
     /* Refined shadow for cards */
     box-shadow: var(--card-shadow-light);
@@ -260,14 +262,14 @@ body {
     transition: background-color 0.3s ease, transform 0.1s ease, box-shadow 0.3s ease, border-color 0.3s ease;
     border: 1px solid transparent; /* Subtle border for precision */
     cursor: pointer;
-    font-size: 1rem;
-    line-height: 1.5rem;
+    font-size: 0.95rem; /* Slightly smaller for compactness */
+    line-height: 1.25rem; /* Adjusted line height */
     outline: none; /* Remove default focus outline */
     /* Remove base box-shadow here, specific button classes will apply their own */
     box-shadow: none; 
 }
 .action-button:hover {
-    transform: translateY(-3px); /* More pronounced lift */
+    transform: translateY(-2px); /* Subtle lift */
     /* Box shadow handled by specific button types using their hover colors */
 }
 .action-button:active {
@@ -278,7 +280,7 @@ body {
     /* Custom focus ring for accessibility, simpler now */
     box-shadow: 0 0 0 4px rgba(var(--focus-ring-color-rgb), 0.5); 
 }
-.action-button:disabled { /* Styling for disabled buttons */
+.action-button:disabled { /* Styling for disabled buttons */ 
     opacity: 0.6;
     cursor: not-allowed;
     transform: none; /* Disable lift effect when disabled */
@@ -292,27 +294,27 @@ body {
     color: #fff;
     border-color: var(--primary-button-border-light);
     box-shadow: var(--primary-button-shadow-light); /* Apply defined shadow */
-    --focus-ring-color-rgb: 37, 99, 235; /* RGB for blue-600 */
+    --focus-ring-color-rgb: 37, 99, 235; /* blue-600 RGB */
 }
 .action-button.primary:hover:not(:disabled) {
     background-color: var(--primary-button-hover-bg-light);
-    box-shadow: 0 15px 30px -10px rgba(37, 99, 235, 0.5), 0 6px 10px -3px rgba(37, 99, 235, 0.3); /* Even stronger hover shadow */
+    box-shadow: 0 12px 24px -8px rgba(37, 99, 235, 0.45), 0 5px 8px -2px rgba(37, 99, 235, 0.25); /* Stronger hover shadow */
 }
 
 .action-button.emerald {
     background-color: var(--emerald-button-bg-light);
     color: #fff;
     border-color: var(--emerald-button-border-light);
-    box-shadow: var(--emerald-button-shadow-light);
-    --focus-ring-color-rgb: 5, 150, 105; /* RGB for emerald-600 */
+    box-shadow: var(--emerald-button-shadow-light); /* Apply defined shadow */
+    --focus-ring-color-rgb: 5, 150, 105; /* emerald-600 RGB */
 }
 .action-button.emerald:hover:not(:disabled) {
     background-color: var(--emerald-button-hover-bg-light);
-    box-shadow: 0 15px 30px -10px rgba(5, 150, 105, 0.5), 0 6px 10px -3px rgba(5, 150, 105, 0.3);
+    box-shadow: 0 12px 24px -8px rgba(5, 150, 105, 0.45), 0 5px 8px -2px rgba(5, 150, 105, 0.25);
 }
 
 .action-button.secondary {
-    background-color: var(--secondary-button-bg-light);
+    background-color: var(--secondary-button-bg-light); /* Use gray for secondary button */
     color: #fff; /* White text for better contrast on gray */
     border-color: var(--secondary-button-border-light);
     box-shadow: var(--secondary-button-shadow-light); /* Lighter shadow */
@@ -327,7 +329,7 @@ body {
 .form-input {
     border: 1px solid var(--input-border-light);
     border-radius: 0.5rem; /* Rounded corners */
-    padding: 0.625rem 1rem;
+    padding: 0.75rem 1rem; /* Slightly more padding */
     width: 100%;
     background-color: var(--card-bg-light); /* Consistent with card background */
     color: var(--text-color-light);
@@ -341,12 +343,12 @@ body {
     outline: none;
     box-shadow: 0 0 0 3px rgba(var(--input-focus-ring-rgb-values-light), 0.3); /* Custom focus ring */
 }
-.form-input:disabled { /* Styling for disabled inputs */
+.form-input:disabled { /* Styling for disabled inputs */ 
     background-color: #f3f4f6; /* Lighter gray for disabled */
     cursor: not-allowed;
     opacity: 0.7;
 }
-body.dark .form-input:disabled {
+html.dark .form-input:disabled {
     background-color: #374151; /* Darker gray for disabled in dark mode */
 }
 
@@ -355,16 +357,16 @@ body.dark .form-input:disabled {
 .drop-area {
     border: 2px dashed var(--drop-area-border-light);
     border-radius: 0.75rem;
-    padding: 2rem;
+    padding: 2.5rem; /* More generous padding */
     text-align: center;
     background-color: var(--drop-area-bg-light);
     transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
     cursor: pointer;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 10rem;
+    align-items: center; /* Center content vertically and horizontally */
+    justify-content: center; /* Center content vertically and horizontally */
+    min-height: 12rem; /* Increased min height */
     box-shadow: var(--drop-area-inner-shadow-light); /* Added inner shadow */
 }
 .drop-area:hover {
@@ -373,7 +375,7 @@ body.dark .form-input:disabled {
 }
 .drop-area p {
     color: var(--drop-area-text-light);
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem; /* Slightly less margin */
     font-size: 1.125rem;
     font-weight: 500;
 }
@@ -384,9 +386,9 @@ body.dark .form-input:disabled {
     display: inline-block;
     background-color: var(--primary-button-bg-light);
     color: #fff;
-    padding: 0.85rem 2rem; /* Adjusted to match action button padding */
+    padding: 0.9rem 2.25rem; /* Adjusted to match action button padding */
     border-radius: 9999px;
-    font-size: 1.125rem;
+    font-size: 1rem; /* Consistent with action buttons */
     font-weight: 600;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     transition: background-color 0.3s ease, box-shadow 0.3s ease;
@@ -401,7 +403,7 @@ body.dark .form-input:disabled {
 .file-status {
     padding: 0.875rem 1.25rem;
     border-radius: 0.625rem;
-    font-size: 0.95rem;
+    font-size: 0.9rem; /* Slightly smaller for compactness */
     font-weight: 500;
     line-height: 1.4;
     display: flex;
@@ -411,7 +413,7 @@ body.dark .form-input:disabled {
 .file-status.message-success {
     background-color: var(--file-status-success-bg-light);
     border: 1px solid var(--file-status-success-border-light);
-    color: var(--file-status-success-text-light);
+    color: var(--file-status-success-text-light); /* Text color */
 }
 .file-status.message-success #fileStatusIconAutoFill,
 .file-status.message-success #fileStatusIconFullAutomation { /* Updated IDs */
@@ -420,7 +422,7 @@ body.dark .form-input:disabled {
 .file-status.message-error {
     background-color: var(--file-status-error-bg-light);
     border: 1px solid var(--file-status-error-border-light);
-    color: var(--file-status-error-text-light);
+    color: var(--file-status-error-text-light); /* Text color */
 }
 .file-status.message-error #fileStatusIconAutoFill,
 .file-status.message-error #fileStatusIconFullAutomation { /* Updated IDs */
@@ -428,7 +430,7 @@ body.dark .form-input:disabled {
 }
 .file-status.message-info {
     background-color: var(--file-status-info-bg-light);
-    border: 1px solid var(--file-status-info-border-light);
+    border: 1px solid var(--file-status-info-border-light); /* Text color */
     color: var(--file-status-info-text-light);
 }
 .file-status.message-info #fileStatusIconAutoFill,
@@ -443,7 +445,7 @@ body.dark .form-input:disabled {
     gap: 0.75rem; /* Space between headers */
     margin-bottom: 2rem;
 }
-.headers-list span {
+.headers-list span { /* Badge styling */
     background-color: var(--header-badge-bg-light);
     color: var(--header-badge-text-light);
     padding: 0.6rem 1.25rem;
@@ -466,22 +468,25 @@ body.dark .form-input:disabled {
     align-items: center;
     cursor: pointer;
     color: var(--text-color-light);
+    user-select: none; /* Prevent text selection */
 }
 .checkbox-label input[type="checkbox"], .radio-label input[type="radio"] {
     height: 1.125rem;
     width: 1.125rem;
-    border: 1px solid var(--input-border-light);
+    border: 2px solid var(--input-border-light); /* Thicker border */
     border-radius: 0.25rem; /* For checkboxes */
     background-color: var(--card-bg-light);
-    transition: background-color 0.2s ease, border-color 0.2s ease;
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
     flex-shrink: 0;
     margin-right: 0.5rem;
+    position: relative; /* For custom checkmark/dot */
+    cursor: pointer;
 }
-.checkbox-label input[type="checkbox"]:checked, .radio-label input[type="radio"]:checked {
-    background-color: var(--primary-button-bg-light); /* Use primary color when checked */
+.checkbox-label input[type="checkbox"]:checked {
+    background-color: var(--primary-button-bg-light);
     border-color: var(--primary-button-bg-light);
     position: relative;
 }
@@ -493,6 +498,11 @@ body.dark .form-input:disabled {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+    font-weight: 700; /* Make checkmark bold */
+}
+.radio-label input[type="radio"]:checked {
+    background-color: var(--primary-button-bg-light);
+    border-color: var(--primary-button-bg-light);
 }
 .radio-label input[type="radio"] {
     border-radius: 50%; /* Make radio buttons round */
@@ -506,11 +516,15 @@ body.dark .form-input:disabled {
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%) scale(1); /* Initial scale */
+    transition: transform 0.2s ease; /* Smooth transition for scale */
 }
 .checkbox-label input[type="checkbox"]:focus, .radio-label input[type="radio"]:focus {
     outline: none;
     box-shadow: 0 0 0 3px rgba(var(--input-focus-ring-rgb-values-light), 0.3);
+}
+.checkbox-label input[type="checkbox"]:active, .radio-label input[type="radio"]:active {
+    transform: scale(0.95); /* Subtle press effect */
 }
 
 /* General Message Boxes (info, success, error) */
@@ -519,7 +533,7 @@ body.dark .form-input:disabled {
     border-radius: 0.5rem;
     font-size: 0.9rem;
     font-weight: 500;
-    line-height: 1.4;
+    line-height: 1.35;
     display: flex;
     align-items: center;
     margin-top: 1rem;
@@ -527,22 +541,22 @@ body.dark .form-input:disabled {
 }
 .message-box i {
     margin-right: 0.75rem;
-    font-size: 1.1rem;
+    font-size: 1.25rem; /* Larger icon */
 }
 .message-success {
     background-color: #d1fae5; /* green-100 */
-    border-left: 4px solid #10b981; /* green-600 */
-    color: #065f46; /* green-900 */
+    border: 1px solid #34d399; /* green-400 */
+    color: #065f46; /* green-700 */
 }
 .message-error {
     background-color: #fee2e2; /* red-100 */
-    border-left: 4px solid #dc2626; /* red-600 */
-    color: #7f1d1d; /* red-900 */
+    border: 1px solid #f87171; /* red-400 */
+    color: #991b1b; /* red-700 */
 }
 .message-info {
-    background-color: #e0f2fe; /* blue-100 */
-    border-left: 4px solid #0284c7; /* light-blue-700 */
-    color: #1e3a8a; /* blue-900 */
+    background-color: #e0f2fe; /* light blue-100 */
+    border: 1px solid #60a5fa; /* blue-400 */
+    color: #1e40af; /* blue-700 */
 }
 
 /* Loading Spinner Animation */
@@ -588,7 +602,7 @@ body.dark .form-input:disabled {
 /* Tab Styling */
 .tab-buttons {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.75rem; /* Increased gap */
     margin-bottom: 1.5rem;
     padding: 0.375rem;
     background-color: var(--tab-button-bg);
@@ -599,7 +613,7 @@ body.dark .form-input:disabled {
 .tab-button {
     flex-grow: 1;
     padding: 0.625rem 1rem;
-    border-radius: 0.625rem;
+    border-radius: 0.75rem; /* Slightly more rounded */
     text-align: center;
     font-weight: 500;
     cursor: pointer;
@@ -614,7 +628,7 @@ body.dark .form-input:disabled {
 .tab-button.active {
     background-color: var(--tab-button-active-bg);
     color: var(--tab-button-active-text);
-    box-shadow: var(--tab-button-active-shadow-light); /* Applied new shadow */
+    box-shadow: var(--tab-button-active-shadow-light);
     transform: translateY(-1px); /* Slight lift for active tab */
     font-weight: 600;
 }
@@ -642,12 +656,11 @@ body.dark .form-input:disabled {
 }
 
 /* Specific styles for Auto Click section */
-#clickableButtonsContainer {
+#clickableButtonsContainer, #clickControlSection .scrollable-list { /* Generic class for scrollable lists */
     max-height: 15rem;
     overflow-y: auto;
-    border: 1px solid var(--clickable-item-border);
-    border-radius: 0.5rem;
-    background-color: var(--clickable-container-bg);
+    border: 1px solid var(--list-item-border-light);
+    border-radius: 0.625rem; /* More consistent border radius */
     padding: 0.5rem;
     margin-bottom: 1.5rem;
     transition: background-color 0.3s ease, border-color 0.3s ease;
@@ -655,7 +668,7 @@ body.dark .form-input:disabled {
 #clickableButtonsContainer > div {
     display: flex;
     align-items: center;
-    padding: 0.625rem;
+    padding: 0.75rem; /* More padding for list items */
     border-bottom: 1px solid var(--clickable-item-border);
     border-radius: 0.375rem;
     margin-bottom: 0.25rem;
@@ -665,10 +678,10 @@ body.dark .form-input:disabled {
     border-bottom: none;
     margin-bottom: 0;
 }
-#clickableButtonsContainer > div:hover {
-    background-color: var(--clickable-item-hover-bg);
+#clickableButtonsContainer > div:hover:not(.selected-button-highlight) { /* Don't change hover color for selected item */
+    background-color: var(--list-item-hover-bg-light);
 }
-#clickableButtonsContainer label {
+#clickableButtonsContainer label { 
     margin-left: 0.5rem;
     font-size: 0.95rem;
     color: var(--text-color-light);
@@ -684,13 +697,14 @@ body.dark .form-input:disabled {
     font-weight: 500;
     color: var(--text-color-light);
     margin-bottom: 0.75rem;
-}
+} /* Specific to clickControlSection's labels */
 /* Highlight for selected clickable button */
 .selected-button-highlight {
     background-color: var(--selected-button-highlight-bg);
     border-color: var(--selected-button-highlight-border);
     font-weight: 600;
 }
+
 
 /* Theme Toggle Switch */
 .theme-switch {
@@ -733,14 +747,13 @@ input:checked + .slider::before {
 }
 
 /* Dark Mode Overrides (apply when body has 'dark' class) */
-body.dark {
+html.dark { /* Apply dark mode styles to html element */
     background-color: var(--bg-color-dark);
     color: var(--text-color-dark);
-}
+} /* Body inherits from html, so no need for body.dark */
 .main-container.dark {
     background-color: var(--card-bg-dark);
     border-color: var(--border-color-dark);
-    /* Refined dark mode shadow */
     box-shadow: var(--main-container-shadow-dark);
 }
 .section-heading.dark, .card-heading.dark {
@@ -750,18 +763,17 @@ body.dark {
 .card.dark {
     background-color: var(--card-bg-dark);
     border-color: var(--border-color-dark);
-    /* Refined dark mode shadow for cards */
-    box-shadow: var(--card-shadow-dark);
+    box-shadow: var(--card-shadow-dark); /* Refined dark mode shadow for cards */
 }
 .action-button.primary.dark {
     background-color: var(--primary-button-bg-dark);
     border-color: var(--primary-button-border-dark);
     box-shadow: var(--primary-button-shadow-dark);
-    --focus-ring-color-rgb: 79, 70, 229; /* indigo-600 RGB */
+    --focus-ring-color-rgb: 79, 70, 229; /* indigo-500 RGB */
 }
 .action-button.primary.dark:hover:not(:disabled) {
     background-color: var(--primary-button-hover-bg-dark);
-    box-shadow: 0 15px 30px -10px rgba(79, 70, 229, 0.5), 0 6px 10px -3px rgba(79, 70, 229, 0.3);
+    box-shadow: 0 12px 24px -8px rgba(79, 70, 229, 0.45), 0 5px 8px -2px rgba(79, 70, 229, 0.25);
 }
 .action-button.emerald.dark {
     background-color: var(--emerald-button-bg-dark);
@@ -771,7 +783,7 @@ body.dark {
 }
 .action-button.emerald.dark:hover:not(:disabled) {
     background-color: var(--emerald-button-hover-bg-dark);
-    box-shadow: 0 15px 30px -10px rgba(6, 95, 70, 0.5), 0 6px 10px -3px rgba(6, 95, 70, 0.3);
+    box-shadow: 0 12px 24px -8px rgba(6, 95, 70, 0.45), 0 5px 8px -2px rgba(6, 95, 70, 0.25);
 }
 .action-button.secondary.dark {
     background-color: var(--secondary-button-bg-dark);
@@ -780,7 +792,7 @@ body.dark {
     box-shadow: var(--secondary-button-shadow-dark);
     --focus-ring-color-rgb: 74, 85, 104; /* gray-700 RGB */
 }
-.action-button.secondary.dark:hover:not(:disabled) {
+.action-button.secondary.dark:hover:not(:disabled) { /* More distinct hover for dark secondary */
     background-color: var(--secondary-button-hover-bg-dark);
     box-shadow: 0 12px 20px -8px rgba(74, 85, 104, 0.35), 0 5px 8px -2px rgba(74, 85, 104, 0.15);
 }
@@ -803,12 +815,12 @@ body.dark {
     border-color: var(--primary-button-bg-dark);
 }
 .drop-area.dark p {
-    color: var(--drop-area-text-dark);
+    color: var(--drop-area-text-dark); /* Apply dark text color */
 }
 .drop-area.dark:hover p {
-    color: var(--drop-area-hover-text-dark);
+    color: var(--drop-area-hover-text-dark); /* Apply dark hover text color */
 }
-.browse-button.dark {
+.browse-button.dark { /* Dark mode for browse button */
     background-color: var(--primary-button-bg-dark);
 }
 .browse-button.dark:hover {
@@ -821,7 +833,7 @@ body.dark {
 }
 .file-status.message-success.dark #fileStatusIconAutoFill,
 .file-status.message-success.dark #fileStatusIconFullAutomation { /* Updated IDs */
-    color: var(--file-status-success-icon-dark);
+    color: var(--file-status-success-icon-dark); /* Apply dark icon color */
 }
 .file-status.message-error.dark {
   background-color: var(--file-status-error-bg-dark);
@@ -830,7 +842,7 @@ body.dark {
 }
 .file-status.message-error.dark #fileStatusIconAutoFill,
 .file-status.message-error.dark #fileStatusIconFullAutomation { /* Updated IDs */
-    color: var(--file-status-error-icon-dark);
+    color: var(--file-status-error-icon-dark); /* Apply dark icon color */
 }
 .file-status.message-info.dark {
   background-color: var(--file-status-info-bg-dark);
@@ -839,7 +851,7 @@ body.dark {
 }
 .file-status.message-info.dark #fileStatusIconAutoFill,
 .file-status.message-info.dark #fileStatusIconFullAutomation { /* Updated IDs */
-    color: var(--file-status-info-icon-dark);
+    color: var(--file-status-info-icon-dark); /* Apply dark icon color */
 }
 .headers-list.dark span {
     background-color: var(--header-badge-bg-dark);
@@ -856,7 +868,7 @@ body.dark {
     border-color: var(--input-border-dark);
     background-color: var(--card-bg-dark);
 }
-.checkbox-label.dark input[type="checkbox"]:checked, .radio-label.dark input[type="radio"]:checked {
+.checkbox-label.dark input[type="checkbox"]:checked, .radio-label.dark input[type="radio"]:checked { /* Checkbox/Radio checked in dark mode */
     background-color: var(--primary-button-bg-dark);
     border-color: var(--primary-button-bg-dark);
 }
@@ -905,20 +917,20 @@ body.dark {
     color: var(--tab-button-active-text-dark);
     box-shadow: var(--tab-button-active-shadow-dark);
 }
-#clickableButtonsContainer.dark {
-    border-color: var(--clickable-item-border);
-    background-color: var(--clickable-container-bg);
+#clickableButtonsContainer.dark, #clickControlSection .scrollable-list.dark { /* Generic list dark mode */
+    border-color: var(--list-item-border-light);
+    background-color: var(--list-container-bg-light);
 }
-#clickableButtonsContainer.dark > div {
-    border-color: var(--clickable-item-border);
+#clickableButtonsContainer.dark > div, #clickControlSection .scrollable-list.dark > div {
+    border-color: var(--list-item-border-light);
 }
-#clickableButtonsContainer.dark > div:hover {
-    background-color: var(--clickable-item-hover-bg);
+#clickableButtonsContainer.dark > div:hover:not(.selected-button-highlight), #clickControlSection .scrollable-list.dark > div:hover:not(.selected-button-highlight) {
+    background-color: var(--list-item-hover-bg-light);
 }
-#clickableButtonsContainer.dark label {
+#clickableButtonsContainer.dark label, #clickControlSection .scrollable-list.dark label {
     color: var(--text-color-dark);
 }
-#clickControlSection.dark {
+#clickControlSection.dark { /* Card for click control section in dark mode */
     border-color: var(--clickable-item-border);
     background-color: var(--clickable-container-bg);
 }
@@ -926,7 +938,7 @@ body.dark {
     color: var(--text-color-dark);
 }
 .selected-button-highlight.dark {
-    background-color: var(--selected-button-highlight-bg);
+    background-color: var(--selected-item-highlight-bg-light); /* Highlight BG in dark mode */
     border-color: var(--selected-button-highlight-border);
 }
 /* Dark mode for theme switch slider */
@@ -944,21 +956,21 @@ body.dark {
 }
 
 
-/* Responsive adjustments for smaller screens */
-@media (max-width: 480px) {
+/* Responsive adjustments for popup sizes */
+@media (max-width: 520px) { /* Adjusted breakpoint */
   .main-container {
-    padding: 1rem;
+    padding: 1.5rem; /* Slightly reduced padding */
   }
   .section-heading, .card-heading {
     font-size: 1rem;
     margin-bottom: 0.75rem;
   }
   .action-button {
-    padding: 0.75rem 1.5rem; /* Adjusted for smaller screens */
+    padding: 0.8rem 1.6rem; /* Adjusted for smaller screens */
     font-size: 0.9rem;
   }
   .browse-button {
-    padding: 0.75rem 1.5rem;
+    padding: 0.8rem 1.6rem;
     font-size: 1rem;
   }
   .drop-area {
@@ -968,12 +980,12 @@ body.dark {
   .drop-area p {
     font-size: 1rem;
   }
-  .file-status {
+  .file-status, .message-box { /* Apply to generic messages too */
     font-size: 0.85rem;
     padding: 0.75rem 1rem;
   }
   .headers-list span {
-    padding: 0.4rem 0.8rem;
+    padding: 0.5rem 0.9rem;
     font-size: 0.8rem;
   }
   .tab-button {
